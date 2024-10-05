@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Multi-Terminal App</title>
+    <link rel="stylesheet" href="http://127.0.0.1:3000/xterm.css">
+    <style>
+        @font-face {
+            font-family: 'JetBrainsMonoNerdFont';
+            src: url('http://127.0.0.1:3000/JetBrainsMonoNerdFontMono_Regular.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        .box {
+            position: absolute;
+            font-size: 40px;
+            text-wrap: nowrap;
+        }
+
+        /* Optional: Styles for better visibility */
+        .center-box {
+            position: absolute;
+            top: 2000px;
+            left: 2000px;
+            width: 100%;
+            height: 100%;
+            background-color: transparent;
+            z-index: -100;
+        }
+
+        .fixed-div {
+            position: fixed;
+            /* Keeps the div fixed on the screen */
+            top: 40px;
+            /* Distance from the top of the viewport */
+            right: 50px;
+            /* Distance from the right of the viewport */
+            background-color: #3498db;
+            /* Background color */
+            color: white;
+            /* Text color */
+            padding: 10px 20px;
+            /* Padding inside the div */
+            border-radius: 5px;
+            /* Rounded corners */
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            /* Shadow effect */
+            z-index: 1000;
+            /* Ensures it's above other elements */
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #5c6f73;
+            margin: 0;
+            padding: 20px;
+            width: 4000px;
+            height: 4000px;
+            transition: transform 0.2s ease-out;
+            transform-origin: center;
+            scroll-behavior: smooth;
+            /* Enable smooth scrolling behavior */
+
+            /* Create repeating horizontal and vertical lines */
+            background-image:
+                linear-gradient(to right, rgb(189, 189, 189) 1px, transparent 1px),
+                /* Vertical lines */
+                linear-gradient(to bottom, rgb(224, 222, 222) 1px, transparent 1px);
+            /* Horizontal lines */
+
+            background-size: 90px 90px;
+            /* Spacing between lines */
+        }
+
+        ._terminal {
+            border: 1px solid #ccc;
+            position: absolute;
+            resize: both;
+            overflow: auto;
+            background-color: #2b2b2b;
+            color: #fff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            transition: transform 0.2s;
+            z-index: 0;
+            scale: 1;
+        }
+
+        .terminal-header {
+            /* background-color: #444; */
+            padding: 5px;
+            cursor: move;
+            user-select: none;
+            background: linear-gradient(to right, #0d5087 0%, #2f7d9c 100%);
+        }
+
+        .terminal-body {
+            height: calc(100% - 30px);
+            width: 100%;
+            padding: 0px;
+            box-sizing: border-box;
+            scrollbar-width: 5%;
+            scrollbar-width: thin;
+            font-family: 'JetBrainsMonoNerdFont';
+        }
+
+        /* Disable body scroll when this class is applied */
+        .no-scroll {
+            overflow: hidden;
+        }
+
+        .custom-scale {
+            transition-duration: 0.3s;
+            overflow: hidden;
+            max-width: 4000px;
+            max-height: 4000px;
+        }
+
+        /* 
+         .semicircle-effect {
+            position: absolute;
+            width: 0;
+            height: 0;
+            background: transparent;
+            border-top: 2px solid red;
+            border-radius: 50% 50% 0 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: -1;
+            animation: growSemicircle 5s linear forwards;
+        }
+
+        @keyframes growSemicircle {
+            0% {
+                width: 0;
+                height: 0;
+                opacity: 1;
+            }
+
+            100% {
+                width: 2000px;
+                // Adjust this size for final semicircle
+                height: 2000px;
+                // Half height to create a semicircle
+                opacity: 0;
+            }
+        } 
+                 */
+
+
+        @keyframes expand-circle {
+            0% {
+                width: 0;
+                height: 0;
+                border-width: 5px;
+                opacity: 1;
+                border-color: rgb(42, 116, 158);
+            }
+
+            100% {
+                width: 4000px;
+                height: 4000px;
+                border-width: 50px;
+                opacity: 0;
+                border-color: rgb(225, 225, 225);
+            }
+        }
+
+        .expand-circle {
+            position: absolute;
+            border: 2px solid rgb(255, 0, 0);
+            /* // Unfilled circle with red border */
+            border-radius: 50%;
+            /* // Prevent interaction */
+            animation: expand-circle 5s linear forwards;
+            transform: translate(-50%, -50%);
+            /* // To ensure the circle is centered */
+            animation-timing-function: ease-out;
+            pointer-events: none;
+            z-index: -1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="center-box"></div>
+    <div id="activebody" class="custom-scale"></div>
+    <h1 class="fixed-div"
+        style="top: 0px;left: 20px; color:black; background-color: transparent; z-index: auto; width: 500px;">
+        Multi-Terminal Application</h1>
+    <button class="fixed-div" id="spawn-button">Spawn Terminal</button>
+    <button class="fixed-div" style="right: 220px;" id="save-button">Save</button>
+    <div class="fixed-div" style="height: 20px; right: 330px; color: white;" id="activeTerms">0</div>
+    <div class="indicator-container" id="indicatorContainer"></div>
+
+    <script src="http://127.0.0.1:3000/socket.io.js"></script>
+    <script src="http://127.0.0.1:3000/xterm.js"></script>
+    <script src="http://127.0.0.1:3000/xterm-addon-fit.js"></script>
+    <script type="module">
+
+        window.addEventListener('load', function () {
+            document.getElementsByClassName("center-box")[0].scrollIntoView();
+        });
+
+        const spawnButton = document.getElementById('spawn-button');
+        window.terminals = {}; // Store terminals by ID
+        let terminalCount = 0; // Count of terminals
+
+        var activebody = document.getElementById("activebody");
+
+
+        function makeDraggable(element, target) {
+            const body = document.body.style;
+            const centerX = body.width / 2;
+            const centerY = body.height / 2;
+
+            let isDragging = false;
+            let offsetX, offsetY;
+
+            element.addEventListener('pointerdown', (event) => {
+                isDragging = true;
+                offsetX = event.clientX - element.getBoundingClientRect().left;
+                offsetY = event.clientY - element.getBoundingClientRect().top;
+
+                // Set capture to track pointer events
+                element.setPointerCapture(event.pointerId);
+            });
+
+            element.addEventListener('pointermove', (event) => {
+                if (!isDragging) return;
+
+                // Calculate new position
+                const newX = event.clientX - offsetX + window.scrollX;
+                const newY = event.clientY - offsetY + window.scrollY;
+
+                // Update element position
+                target.style.left = `${newX}px`;
+                target.style.top = `${newY}px`;
+            });
+
+            element.addEventListener('pointerup', () => {
+                isDragging = false;
+            });
+
+            element.addEventListener('pointercancel', () => {
+                isDragging = false;
+            });
+        }
+
+        spawnButton.addEventListener('click', () => {
+            const terminalId = terminalCount++;
+            document.getElementById("activeTerms").innerText = Number(document.getElementById("activeTerms").innerText) + 1; createTerminal(terminalId);
+        });
+
+        var clicks_counter = 0;
+
+        function createTerminal(id) {
+            const terminalDiv = document.createElement('div');
+            terminalDiv.className = '_terminal';
+            terminalDiv.style.left = Number(Number(window.scrollX) + Number(Math.random() * 600)) + "px"; // Random initial position
+            terminalDiv.style.top = Number(Number(window.scrollY) + Number(Math.random() * 400)) + "px"; // Random initial position
+            terminalDiv.id = "termDiv" + id;
+
+            const terminalHeader = document.createElement('div');
+            terminalHeader.className = 'terminal-header';
+            terminalHeader.textContent = `Terminal ${id}`;
+            terminalHeader.contentEditable = true;
+            terminalHeader.style.display = "flex";
+            terminalHeader.style.justifyContent = "space-between";
+            terminalHeader.style.paddingRight = "10px";
+            // terminalHeader.style.paddingleft = "5px";
+
+            const order = document.createElement('div');
+            order.className = 'group_order';
+            order.textContent = 'MANUAL';
+            order.style.display = "inline-block";
+            order.contentEditable = true;
+            order.style.position = "right: 20px";
+            terminalHeader.appendChild(order);
+
+            const terminalBody = document.createElement('div');
+            terminalBody.className = 'terminal-body';
+            terminalBody.id = "termBody" + id;
+
+            terminalDiv.appendChild(terminalHeader);
+            terminalDiv.appendChild(terminalBody);
+            activebody.appendChild(terminalDiv);
+
+            terminalDiv.style.width = '800px';
+            terminalDiv.style.height = '450px';
+            terminalDiv.style.scale = 1;
+            // terminalDiv.removeAttribute("width");
+            // terminalDiv.removeAttribute("height");
+
+            var term = new Terminal({
+                cursorBlink: true,
+                scrollback: 1000,
+                fontFamily: 'JetBrainsMonoNerdFont',
+                // rows: 10,
+                // cols: 50,
+            });
+            
+            clicks_counter++;
+            terminalDiv.style.zIndex = clicks_counter;
+
+            // // Add mouseover and mouseleave event listeners
+            // terminalBody.addEventListener('mouseover', () => {
+            //     terminalDiv.style.transform = 'scale(1.2)'; // Scale up
+            // });
+
+            // terminalDiv.addEventListener('mouseleave', () => {
+            //     terminalDiv.style.transform = 'scale(1)'; // Scale back down
+            // });
+
+
+            // Make the terminal draggable
+            makeDraggable(terminalHeader, terminalDiv);
+
+            term.open(terminalBody);
+            setTimeout(() => {
+                term.options.fontSize = 16;
+            }, 1);
+
+            let fitAddon = new FitAddon.FitAddon();
+            term.loadAddon(fitAddon);
+            fitAddon.fit();
+
+            // Store the terminal instance
+            const socket = io();
+            var last_command = ""
+            window.terminals[id] = { termDiv: terminalDiv, term, socket, last_command }; // Connect a new socket for each terminal
+
+            // Handle input/output as needed
+            term.onData((data) => {
+                socket.emit('input', { terminalId: id, data });
+            });
+
+            socket.on('output', (data) => {
+                if (data.terminalId === id) {
+                    term.write(data.output);
+                }
+            });
+
+            // Create a new shell on the server when the terminal is created
+            socket.emit('new-terminal', { terminalId: id });
+
+            // Function to resize the terminal
+            function resizeTerminal() {
+                fitAddon.fit();
+                const new_w = term.cols;
+                const new_h = term.rows;
+                console.log("current size: ", id, new_w, new_h);
+                terminalBody.style.width = "100%";
+                terminalBody.style.height = 'calc(100% - 30px)';
+                socket.emit('resize', { id, new_w, new_h });
+            }
+
+
+            new ResizeObserver(resizeTerminal).observe(terminalDiv);
+            term.onResize(({ cols, rows }) => {
+                resizeTerminal();
+            });
+
+
+            socket.on('clear', (data) => {
+                console.log(data);
+                if (data.terminal_Id === id) {
+                    term.reset();
+                }
+            });
+
+            socket.on('command', (data) => {
+                window.terminals[data.terminal_Id].last_command = data.command;
+            });
+
+            // Listen for exit event from the server and destroy terminal
+            socket.on('exit', (data) => {
+                console.log(data);
+                if (data.terminal_Id === id) {
+                    term.dispose(); // Dispose the terminal instance
+                    document.getElementById('termDiv' + id).remove(); // Remove the terminal div
+                    delete window.terminals[id]; // Remove the terminal instance from the store
+                    document.getElementById("activeTerms").innerText = Number(document.getElementById("activeTerms").innerText) - 1;
+                }
+            });
+
+
+            // Function to handle scroll event
+            function handleScroll(event, target) {
+                var div = target;
+                const scale = 0.02;
+                // div.style.transformOrigin = 'top left';
+                const rect = target.getBoundingClientRect();
+
+                // Calculate mouse position relative to the box
+                const mouseX = event.clientX - rect.left;
+                const mouseY = event.clientY - rect.top;
+
+                // Set transform origin based on mouse position
+                // target.style.transformOrigin = `${mouseX}px ${mouseY}px`;
+
+                if (event.deltaY > 0) {
+                    // Scroll up
+                    // console.log("up");
+                    // div.style.scale = Number(div.style.scale) + Number(scale)
+                    term.options.fontSize += 0.1;
+
+                } else {
+                    // Scroll down
+                    // console.log("down");
+                    // div.style.scale = Number(div.style.scale) - Number(scale)
+                    term.options.fontSize -= 0.1;
+                }
+                fitAddon.fit();
+            }
+
+            // Add scroll event listener
+            terminalHeader.addEventListener('wheel', function () {
+                event.preventDefault(); // Prevent the default scroll behavior
+                handleScroll(event, terminalDiv);
+            });
+
+            // Function to prevent page scrolling when using the mouse wheel inside the terminal
+            terminalBody.addEventListener('wheel', (event) => {
+                const scrollableHeight = terminalBody.scrollHeight - terminalBody.clientHeight;
+                const scrollTop = terminalBody.scrollTop;
+
+                if ((event.deltaY < 0 && scrollTop <= 0) || (event.deltaY > 0 && scrollTop >= scrollableHeight)) {
+                    event.preventDefault(); // Prevent default scrolling if scrollbar is at the top or bottom
+                }
+
+            });
+
+            const body = document.body;
+            // Disable body scrolling when mouse is inside the terminal
+            terminalDiv.addEventListener('click', () => {
+                clicks_counter += 1;
+                terminalDiv.style.zIndex = clicks_counter;
+            });
+
+            terminalDiv.addEventListener('mouseover', () => {
+                body.classList.add('no-scroll');
+            });
+
+            // Enable body scrolling again when mouse leaves the terminal
+            terminalDiv.addEventListener('mouseleave', () => {
+                body.classList.remove('no-scroll');
+            });
+
+            terminalDiv.addEventListener('wheel', (event) => {
+                let currentScale = Number(document.querySelector("._terminal").style.scale);
+                if (event.ctrlKey) {
+                    event.preventDefault();
+                    // Prevent the page zooming behavior
+
+                    // Detect zoom direction
+                    if (event.deltaY > 0) {
+                        // Zoom in
+                        currentScale = Math.min(currentScale * 1.05, 3); // Limit max scale to 3x
+                    } else {
+                        // Zoom out
+                        currentScale = Math.max(currentScale * 0.95, 1); // Limit min scale to 0.5x
+                    }
+                    // Apply scaling transformation
+                    terminalDiv.style.scale = currentScale;
+                }
+            });
+
+        }
+
+        function unescapeHTML(html) {
+            // Create a temporary DOM element
+            const tempDiv = document.createElement('div');
+
+            // Set the innerHTML to the encoded HTML
+            tempDiv.innerHTML = html;
+
+            // The browser will automatically decode the HTML
+            return tempDiv.textContent || tempDiv.innerText;
+        }
+
+        // Function to create and position the box
+        function createBox(x, y, htmlContent) {
+            const box = document.createElement('div');
+            box.classList.add('box');
+            box.style.left = `${x}px`;
+            box.style.top = `${y}px`;
+
+            // Set the innerHTML to the provided HTML content
+            // box.html = htmlContent;
+            box.innerHTML = htmlContent;
+            box.contentEditable = true;
+
+            box.addEventListener('dblclick', function (event) {
+                event.preventDefault();
+                box.contentEditable = true;
+            });
+
+            box.addEventListener('focusout', function (event) {
+                box.contentEditable = false;
+                box.innerHTML = unescapeHTML(box.innerHTML)
+            });
+
+            // Append the box to the body
+            activebody.appendChild(box);
+
+            makeDraggable(box, box);
+        }
+
+        // Add a double-click event listener to the body
+        document.body.addEventListener('dblclick', function (event) {
+            if (event.target !== document.body) {
+                return;
+            }
+            // Get the mouse position and account for scroll
+            const scrollX = window.scrollX;
+            const scrollY = window.scrollY;
+
+            // if(event.target)
+
+            // Position the box at the exact location of the double-click
+            const x = event.clientX + scrollX;
+            const y = event.clientY + scrollY;
+
+            // The HTML content to insert in the box
+            const htmlContent = "I'm a box!";
+
+            // Create the box
+            createBox(x, y, htmlContent);
+        });
+    </script>
+
+    <!-- 
+    <script>
+
+        const saveButton = document.getElementById('save-button');
+        saveButton.addEventListener('click', () => {
+            for (const { t, s, lc } of window.terminals) {
+                console.log(lc);
+            }
+        });
+
+        
+
+    </script> -->
+
+    <script>
+        function getElementData(element) {
+            const computedStyles = window.getComputedStyle(element);
+            const rect = element.getBoundingClientRect();
+
+            const elementData = {
+                tagName: element.tagName,
+                styles: {},
+                position: {
+                    top: rect.top,
+                    left: rect.left,
+                    width: rect.width,
+                    height: rect.height,
+                }
+            };
+
+            for (let style of computedStyles) {
+                elementData.styles[style] = computedStyles.getPropertyValue(style);
+            }
+
+            return elementData;
+        }
+
+        document.getElementById('save-button').addEventListener('click', () => {
+            const terminalHeader = document.querySelector('.terminalHeader');
+            const terminalBody = document.querySelector('.terminalBody');
+
+            // Get data for terminalHeader and terminalBody
+            const headerData = getElementData(window.terminals[0].termDiv);
+            // const bodyData = getElementData(terminalBody);
+
+            // Combine the data into a single object
+            const terminalData = {
+                terminalHeader: headerData,
+                terminalBody: bodyData
+            };
+
+            // Convert the object to a JSON string
+            const jsonString = JSON.stringify(terminalData, null, 2);
+
+            // Download the JSON string as a file
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'terminalElementsData.json'; // Name of the downloaded file
+            link.click();
+        });
+    </script>
+
+    <script>
+
+        // body dragging
+        let isDragging = false;
+        let startX, startY;
+        let scrollLeft, scrollTop;
+        let lastX, lastY;
+        let velocityX = 0;
+        let velocityY = 0;
+        let momentumScroll = false;
+
+        document.body.style.scrollBehavior = 'smooth'; // Enable smooth scrolling behavior
+
+        document.body.addEventListener('mousedown', function (event) {
+            // Check if the clicked target or its closest parent contains ._terminal or ._box
+            if (!event.target.closest('._terminal') && !event.target.closest('._box')) {
+                isDragging = true;
+
+                // Record the initial mouse position and scroll position
+                startX = event.clientX;
+                startY = event.clientY;
+                scrollLeft = window.scrollX;
+                scrollTop = window.scrollY;
+
+                // Initialize last mouse position
+                lastX = startX;
+                lastY = startY;
+
+                document.body.style.cursor = 'grabbing'; // Optional: change cursor to indicate dragging
+
+                // Start dragging behavior
+                document.body.addEventListener('mousemove', onDrag);
+            }
+        });
+
+        document.body.addEventListener('mouseup', function () {
+            if (isDragging) {
+                isDragging = false;
+                document.body.style.cursor = ''; // Reset cursor
+                document.body.removeEventListener('mousemove', onDrag); // Stop dragging behavior
+
+                // Start momentum effect
+                momentumScroll = true;
+                requestAnimationFrame(applyMomentum);
+            }
+        });
+
+        document.body.addEventListener('mouseleave', function () {
+            // Stop dragging if the mouse leaves the window (optional)
+            if (isDragging) {
+                isDragging = false;
+                document.body.style.cursor = ''; // Reset cursor
+                document.body.removeEventListener('mousemove', onDrag);
+            }
+        });
+
+        function onDrag(event) {
+            if (!isDragging) return;
+
+            // Calculate the difference between the current mouse position and the initial one
+            const dx = event.clientX - startX;
+            const dy = event.clientY - startY;
+
+            // Calculate velocity based on mouse movement
+            velocityX = event.clientX - lastX;
+            velocityY = event.clientY - lastY;
+
+            // Update last mouse position
+            lastX = event.clientX;
+            lastY = event.clientY;
+
+            // Use requestAnimationFrame for smooth sliding
+            window.scrollTo(scrollLeft - dx, scrollTop - dy);
+        }
+
+        function applyMomentum() {
+            if (momentumScroll) {
+                // Reduce velocity gradually for a deceleration effect
+                velocityX *= 0.90; // Adjust friction (0.95 for a slower stop)
+                velocityY *= 0.90;
+
+                // Update scroll position based on velocity
+                window.scrollBy(-velocityX, -velocityY);
+
+                // Continue applying momentum until velocity drops below a threshold
+                if (Math.abs(velocityX) > 0.1 || Math.abs(velocityY) > 0.1) {
+                    requestAnimationFrame(applyMomentum);
+                } else {
+                    momentumScroll = false; // Stop momentum when velocity is low
+                }
+            }
+        }
+
+
+        // //scaling code
+
+        // let scale = 1; // Initial scale of the .custom_scale elements
+        // const scaleAmount = 0.01; // Change in scale per wheel notch
+        // const body = document.body.style;
+        // const centerX = window.innerWidth / 2;
+        // const centerY = window.innerHeight / 2;
+        // document.querySelectorAll('.custom-scale').forEach(element => {
+        //     // element.style.transformOrigin = `${mouseX}px ${mouseY}px`;
+        //     element.style.transformOrigin = `${centerX}px ${centerY}px`;
+
+        //     // element.style.transition = 'transform 0.1s'; // Optional: smooth transition for scaling
+        // });
+
+
+
+        // // Add wheel event listener with passive: false
+        // document.body.addEventListener('wheel', function (event) {
+        //     if (event.target.closest('._terminal') || event.target.closest('.box'))
+        //         return;
+        //     event.preventDefault(); // Prevent default scrolling behavior
+
+        //     // Calculate the mouse position relative to the document
+        //     const mouseX = event.clientX;
+        //     const mouseY = event.clientY;
+
+        //     // Adjust scale based on the wheel delta
+        //     if (event.deltaY < 0) {
+        //         // Zoom in
+        //         scale = Math.min(1, scale + scaleAmount);
+        //     } else {
+        //         // Zoom out
+        //         scale = Math.max(0.5, scale - scaleAmount); // Prevent scale from going below 0.1
+        //     }
+
+        //     // console.log("scrolling");
+
+        //     // Update transform origin to mouse position
+        //     document.querySelectorAll('.custom-scale').forEach(element => {
+        //         // element.style.transformOrigin = `${mouseX}px ${mouseY}px`;
+        //         element.style.transform = `scale(${scale})`;
+        //         // element.style.transition = 'transform 0.1s'; // Optional: smooth transition for scaling
+        //     });
+        // }, { passive: false }); // Ensure the listener is non-passive
+
+    </script>
+
+    <script>
+
+        // function checkCircleOverflow(circle) {
+        //     // Get the body's dimensions
+        //     const bodyWidth = document.body.width;
+        //     const bodyHeight = document.body.height;
+
+        //     // Get the circle's bounding box (size and position)
+        //     const circleRect = circle.getBoundingClientRect();
+
+        //     // Check if the circle has overflowed the body width or height
+        //     const isOverflowing = (
+        //         circleRect.right > bodyWidth ||    // Right edge of circle is beyond body width
+        //         circleRect.bottom > bodyHeight ||  // Bottom edge of circle is beyond body height
+        //         circleRect.left < 0 ||             // Left edge of circle is beyond the left body boundary
+        //         circleRect.top < 0                 // Top edge of circle is beyond the top body boundary
+        //     );
+
+        //     return isOverflowing;
+        // }
+
+        // Example usage during animation
+        function createCircleEffect(element) {
+            const circle = document.createElement('div');
+            circle.className = 'expand-circle';
+
+            // Position the circle over the element
+            const centerX = document.body.clientWidth / 2;
+            const centerY = document.body.clientHeight / 2;
+
+            // Set circle's initial position
+            circle.style.left = `${centerX}px`;
+            circle.style.top = `${centerY}px`;
+            document.body.appendChild(circle);
+
+            // Remove the circle after 5 seconds (animation duration)
+            setTimeout(() => {
+                clearInterval(); // Stop checking when the animation ends
+                document.body.removeChild(circle);
+            }, 10000);
+        }
+        // Repeat the effect every 5 seconds
+        setInterval(createCircleEffect, 15000);
+
+        // function createSemicircleEffect(element) {
+        //     const semicircle = document.createElement('div');
+        //     semicircle.className = 'semicircle-effect';
+
+        //     // Get the center of the element and the viewport center
+        //     const rect = element.getBoundingClientRect();
+        //     const centerX = rect.left + rect.width / 2 + window.pageXOffset;
+        //     const centerY = rect.top + rect.height / 2 + window.pageYOffset;
+
+        //     // Calculate the center of the viewport (client center)
+        //     const clientCenterX = document.body.style.width / 2;
+        //     const clientCenterY = document.body.style.height / 2;
+
+        //     // Set the initial position of the semicircle
+        //     semicircle.style.left = `${centerX}px`;
+        //     semicircle.style.top = `${centerY}px`;
+        //     document.body.appendChild(semicircle);
+
+        //     // Calculate the angle between the element and the client center
+        //     const angle = Math.atan2(clientCenterY - centerY, clientCenterX - centerX) * (180 / Math.PI);
+
+        //     // Rotate the semicircle to point towards the center of the screen
+        //     semicircle.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+
+        //     // Remove the semicircle after 5 seconds (animation duration)
+        //     setTimeout(() => {
+        //         document.body.removeChild(semicircle);
+        //     }, 5000);
+        // }
+
+        // function applySemiircleEffect() {
+        //     const terminals = document.querySelectorAll('._terminal');
+        //     terminals.forEach((terminal) => {
+        //         createSemicircleEffect(terminal);
+        //     });
+        // }
+
+        // // Repeat the effect every 5 seconds
+        // setInterval(applySemiircleEffect, 5000);
+
+    </script>
+
+    <script>
+        const saveButton = document.getElementById('save-button');
+        saveButton.addEventListener('click', () => {
+            const htmlContent = document.documentElement.outerHTML;
+
+            // Create a Blob with the HTML content
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+
+            // Create an anchor element and set it up for downloading the file
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'webpage.html'; // The filename you want to save it as
+
+            // Trigger the download by simulating a click
+            // document.body.appendChild(link);
+            link.click();
+
+            // Clean up by removing the link element
+            document.body.removeChild(link);
+
+        });
+    </script>
+
+    <script>
+        // window.onload
+    </script>
+
+
+</body>
+
+</html>
