@@ -93,19 +93,19 @@ io.on('connection', (socket) => {
                     socket.emit('exit');
                 }
                 else {
-                    socket.emit("command", { extractedCommand });
+                    socket.emit("command", { data, extractedCommand });
                 }
             }
 
-            socket.emit('output', { terminalId, output: data });
+            socket.emit('output', data);
         });
 
 
         var command = ""
         // Handle input from the client
         socket.on('input', (inputData) => {
-            const { terminalId: terminal_Id, data } = inputData;
-            terminals[terminal_Id].write(data);
+            const data = inputData;
+            shell.write(data);
             // console.log(data.charCodeAt(0));
             // if (terminals[terminal_Id]) {
 
@@ -129,10 +129,7 @@ io.on('connection', (socket) => {
 
         // Handle shell exit
         socket.on('disconnect', () => {
-            if (terminals[terminalId]) {
-                terminals[terminalId].kill(); // Kill the associated shell when the client disconnects
-                delete terminals[terminalId]; // Remove the terminal instance from the store
-            }
+            shell.kill(); // Kill the associated shell when the client disconnects
             console.log('Client disconnected');
         });
 
@@ -143,9 +140,8 @@ io.on('connection', (socket) => {
             // console.log("resize : ", id, new_w, new_h)
             if (new_w <= 0 || new_h <= 0 || new_w == undefined || new_h == undefined)
                 return;
-            if (terminals[id]) {
-                terminals[id].resize(new_w, new_h);
-            }
+
+            shell.resize(new_w, new_h);
         });
     });
 });

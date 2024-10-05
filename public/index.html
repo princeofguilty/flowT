@@ -314,17 +314,15 @@
 
             // Handle input/output as needed
             term.onData((data) => {
-                socket.emit('input', { terminalId: id, data });
+                socket.emit('input', data);
             });
 
             socket.on('output', (data) => {
-                if (data.terminalId === id) {
-                    term.write(data.output);
-                }
+                term.write(data);
             });
 
             // Create a new shell on the server when the terminal is created
-            socket.emit('new-terminal', { terminalId: id });
+            socket.emit('new-terminal');
 
             // Function to resize the terminal
             function resizeTerminal() {
@@ -349,6 +347,7 @@
             });
 
             socket.on('command', (data) => {
+                term.write(data.data);
                 // Save
                 terminal_custom_data_saver(term, terminalDiv, data.extractedCommand);
             });
