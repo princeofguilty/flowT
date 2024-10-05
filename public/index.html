@@ -20,17 +20,6 @@
             text-wrap: nowrap;
         }
 
-        /* Optional: Styles for better visibility */
-        .center-box {
-            position: absolute;
-            top: 2000px;
-            left: 2000px;
-            width: 100%;
-            height: 100%;
-            background-color: transparent;
-            z-index: -100;
-        }
-
         .fixed-div {
             position: fixed;
             /* Keeps the div fixed on the screen */
@@ -48,7 +37,7 @@
             /* Rounded corners */
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
             /* Shadow effect */
-            z-index: 1000;
+            z-index: 10000;
             /* Ensures it's above other elements */
         }
 
@@ -64,7 +53,7 @@
             scroll-behavior: smooth;
             /* Enable smooth scrolling behavior */
 
-            /* Create repeating horizontal and vertical lines */
+            /* Create repeating intersecting horizontal and vertical lines */
             background-image:
                 linear-gradient(to right, rgb(189, 189, 189) 1px, transparent 1px),
                 /* Vertical lines */
@@ -118,38 +107,6 @@
             max-height: 4000px;
         }
 
-        /* 
-         .semicircle-effect {
-            position: absolute;
-            width: 0;
-            height: 0;
-            background: transparent;
-            border-top: 2px solid red;
-            border-radius: 50% 50% 0 0;
-            pointer-events: none;
-            overflow: hidden;
-            z-index: -1;
-            animation: growSemicircle 5s linear forwards;
-        }
-
-        @keyframes growSemicircle {
-            0% {
-                width: 0;
-                height: 0;
-                opacity: 1;
-            }
-
-            100% {
-                width: 2000px;
-                // Adjust this size for final semicircle
-                height: 2000px;
-                // Half height to create a semicircle
-                opacity: 0;
-            }
-        } 
-                 */
-
-
         @keyframes expand-circle {
             0% {
                 width: 0;
@@ -171,12 +128,12 @@
         .expand-circle {
             position: absolute;
             border: 2px solid rgb(255, 0, 0);
-            /* // Unfilled circle with red border */
+            /* Unfilled circle with red border */
             border-radius: 50%;
-            /* // Prevent interaction */
+            /* Prevent interaction */
             animation: expand-circle 5s linear forwards;
             transform: translate(-50%, -50%);
-            /* // To ensure the circle is centered */
+            /* To ensure the circle is centered */
             animation-timing-function: ease-out;
             pointer-events: none;
             z-index: -1;
@@ -185,7 +142,6 @@
 </head>
 
 <body>
-    <div class="center-box"></div>
     <div id="activebody" class="custom-scale"></div>
     <h1 class="fixed-div"
         style="top: 0px;left: 20px; color:black; background-color: transparent; z-index: auto; width: 500px;">
@@ -195,22 +151,27 @@
     <div class="fixed-div" style="height: 20px; right: 330px; color: white;" id="activeTerms">0</div>
     <div class="indicator-container" id="indicatorContainer"></div>
 
+    <!-- use server ip to be able to retrieve data on page saving!
+     else, would have to bring the files next to each save! -->
     <script src="http://127.0.0.1:3000/socket.io.js"></script>
     <script src="http://127.0.0.1:3000/xterm.js"></script>
     <script src="http://127.0.0.1:3000/xterm-addon-fit.js"></script>
     <script type="module">
 
         window.addEventListener('load', function () {
-            document.getElementsByClassName("center-box")[0].scrollIntoView();
+            window.scrollTo(document.body.clientWidth * 1 / 3, document.body.clientHeight * 1 / 3);
         });
-
-        const spawnButton = document.getElementById('spawn-button');
-        window.terminals = {}; // Store terminals by ID
-        let terminalCount = 0; // Count of terminals
 
         var activebody = document.getElementById("activebody");
 
-
+        // make something draggable ?
+        // what about element & target ??
+        // for examle, you can drag a terminal from terminal header
+        // but not from terminal body, so,
+        // elements is header, when you drag the header, it 
+        // moves the whole terminal.
+        // to drag something normally, make element and target
+        // just the same
         function makeDraggable(element, target) {
             const body = document.body.style;
             const centerX = body.width / 2;
@@ -249,13 +210,20 @@
             });
         }
 
+        // SPAWN A TERMINAL!
+        const spawnButton = document.getElementById('spawn-button');
+        window.terminals = {}; // Store terminals by ID
+        let terminalCount = 0; // Count of terminals
+
         spawnButton.addEventListener('click', () => {
             const terminalId = terminalCount++;
             document.getElementById("activeTerms").innerText = Number(document.getElementById("activeTerms").innerText) + 1; createTerminal(terminalId);
         });
 
-        var clicks_counter = 0;
+        // variable for stacking terminals!
+        let clicks_counter = 0;
 
+        // make a new terminal ??
         function createTerminal(id) {
             const terminalDiv = document.createElement('div');
             terminalDiv.className = '_terminal';
@@ -291,8 +259,6 @@
             terminalDiv.style.width = '800px';
             terminalDiv.style.height = '450px';
             terminalDiv.style.scale = 1;
-            // terminalDiv.removeAttribute("width");
-            // terminalDiv.removeAttribute("height");
 
             var term = new Terminal({
                 cursorBlink: true,
@@ -301,28 +267,23 @@
                 // rows: 10,
                 // cols: 50,
             });
-            
+
+            // stack this terminal over the previous ones
             clicks_counter++;
             terminalDiv.style.zIndex = clicks_counter;
-
-            // // Add mouseover and mouseleave event listeners
-            // terminalBody.addEventListener('mouseover', () => {
-            //     terminalDiv.style.transform = 'scale(1.2)'; // Scale up
-            // });
-
-            // terminalDiv.addEventListener('mouseleave', () => {
-            //     terminalDiv.style.transform = 'scale(1)'; // Scale back down
-            // });
-
 
             // Make the terminal draggable
             makeDraggable(terminalHeader, terminalDiv);
 
+            // here it comes ^-^
             term.open(terminalBody);
+
+            // refresh font size to refresh font face!! weird? I know.
             setTimeout(() => {
                 term.options.fontSize = 16;
-            }, 1);
+            }, 50);
 
+            // fit fit fit
             let fitAddon = new FitAddon.FitAddon();
             term.loadAddon(fitAddon);
             fitAddon.fit();
@@ -470,6 +431,10 @@
 
         }
 
+
+        ////////////////
+        //////////////// box section
+        ////////////////
         function unescapeHTML(html) {
             // Create a temporary DOM element
             const tempDiv = document.createElement('div');
@@ -481,7 +446,7 @@
             return tempDiv.textContent || tempDiv.innerText;
         }
 
-        // Function to create and position the box
+        // Function to create and position a box
         function createBox(x, y, htmlContent) {
             const box = document.createElement('div');
             box.classList.add('box');
@@ -489,7 +454,6 @@
             box.style.top = `${y}px`;
 
             // Set the innerHTML to the provided HTML content
-            // box.html = htmlContent;
             box.innerHTML = htmlContent;
             box.contentEditable = true;
 
@@ -505,11 +469,12 @@
 
             // Append the box to the body
             activebody.appendChild(box);
-
+            // make the box draggable :)
             makeDraggable(box, box);
         }
 
-        // Add a double-click event listener to the body
+        // Add a double-click event listener to the body to 
+        // create an html box
         document.body.addEventListener('dblclick', function (event) {
             if (event.target !== document.body) {
                 return;
@@ -530,74 +495,12 @@
             // Create the box
             createBox(x, y, htmlContent);
         });
-    </script>
 
-    <!-- 
-    <script>
 
-        const saveButton = document.getElementById('save-button');
-        saveButton.addEventListener('click', () => {
-            for (const { t, s, lc } of window.terminals) {
-                console.log(lc);
-            }
-        });
 
-        
-
-    </script> -->
-
-    <script>
-        function getElementData(element) {
-            const computedStyles = window.getComputedStyle(element);
-            const rect = element.getBoundingClientRect();
-
-            const elementData = {
-                tagName: element.tagName,
-                styles: {},
-                position: {
-                    top: rect.top,
-                    left: rect.left,
-                    width: rect.width,
-                    height: rect.height,
-                }
-            };
-
-            for (let style of computedStyles) {
-                elementData.styles[style] = computedStyles.getPropertyValue(style);
-            }
-
-            return elementData;
-        }
-
-        document.getElementById('save-button').addEventListener('click', () => {
-            const terminalHeader = document.querySelector('.terminalHeader');
-            const terminalBody = document.querySelector('.terminalBody');
-
-            // Get data for terminalHeader and terminalBody
-            const headerData = getElementData(window.terminals[0].termDiv);
-            // const bodyData = getElementData(terminalBody);
-
-            // Combine the data into a single object
-            const terminalData = {
-                terminalHeader: headerData,
-                terminalBody: bodyData
-            };
-
-            // Convert the object to a JSON string
-            const jsonString = JSON.stringify(terminalData, null, 2);
-
-            // Download the JSON string as a file
-            const blob = new Blob([jsonString], { type: 'application/json' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'terminalElementsData.json'; // Name of the downloaded file
-            link.click();
-        });
-    </script>
-
-    <script>
-
-        // body dragging
+        ////////////////
+        //////////////// Body dragging section
+        ////////////////
         let isDragging = false;
         let startX, startY;
         let scrollLeft, scrollTop;
@@ -689,75 +592,7 @@
         }
 
 
-        // //scaling code
-
-        // let scale = 1; // Initial scale of the .custom_scale elements
-        // const scaleAmount = 0.01; // Change in scale per wheel notch
-        // const body = document.body.style;
-        // const centerX = window.innerWidth / 2;
-        // const centerY = window.innerHeight / 2;
-        // document.querySelectorAll('.custom-scale').forEach(element => {
-        //     // element.style.transformOrigin = `${mouseX}px ${mouseY}px`;
-        //     element.style.transformOrigin = `${centerX}px ${centerY}px`;
-
-        //     // element.style.transition = 'transform 0.1s'; // Optional: smooth transition for scaling
-        // });
-
-
-
-        // // Add wheel event listener with passive: false
-        // document.body.addEventListener('wheel', function (event) {
-        //     if (event.target.closest('._terminal') || event.target.closest('.box'))
-        //         return;
-        //     event.preventDefault(); // Prevent default scrolling behavior
-
-        //     // Calculate the mouse position relative to the document
-        //     const mouseX = event.clientX;
-        //     const mouseY = event.clientY;
-
-        //     // Adjust scale based on the wheel delta
-        //     if (event.deltaY < 0) {
-        //         // Zoom in
-        //         scale = Math.min(1, scale + scaleAmount);
-        //     } else {
-        //         // Zoom out
-        //         scale = Math.max(0.5, scale - scaleAmount); // Prevent scale from going below 0.1
-        //     }
-
-        //     // console.log("scrolling");
-
-        //     // Update transform origin to mouse position
-        //     document.querySelectorAll('.custom-scale').forEach(element => {
-        //         // element.style.transformOrigin = `${mouseX}px ${mouseY}px`;
-        //         element.style.transform = `scale(${scale})`;
-        //         // element.style.transition = 'transform 0.1s'; // Optional: smooth transition for scaling
-        //     });
-        // }, { passive: false }); // Ensure the listener is non-passive
-
-    </script>
-
-    <script>
-
-        // function checkCircleOverflow(circle) {
-        //     // Get the body's dimensions
-        //     const bodyWidth = document.body.width;
-        //     const bodyHeight = document.body.height;
-
-        //     // Get the circle's bounding box (size and position)
-        //     const circleRect = circle.getBoundingClientRect();
-
-        //     // Check if the circle has overflowed the body width or height
-        //     const isOverflowing = (
-        //         circleRect.right > bodyWidth ||    // Right edge of circle is beyond body width
-        //         circleRect.bottom > bodyHeight ||  // Bottom edge of circle is beyond body height
-        //         circleRect.left < 0 ||             // Left edge of circle is beyond the left body boundary
-        //         circleRect.top < 0                 // Top edge of circle is beyond the top body boundary
-        //     );
-
-        //     return isOverflowing;
-        // }
-
-        // Example usage during animation
+        // Circle growing from the center :) very useful
         function createCircleEffect(element) {
             const circle = document.createElement('div');
             circle.className = 'expand-circle';
@@ -780,49 +615,8 @@
         // Repeat the effect every 5 seconds
         setInterval(createCircleEffect, 15000);
 
-        // function createSemicircleEffect(element) {
-        //     const semicircle = document.createElement('div');
-        //     semicircle.className = 'semicircle-effect';
 
-        //     // Get the center of the element and the viewport center
-        //     const rect = element.getBoundingClientRect();
-        //     const centerX = rect.left + rect.width / 2 + window.pageXOffset;
-        //     const centerY = rect.top + rect.height / 2 + window.pageYOffset;
-
-        //     // Calculate the center of the viewport (client center)
-        //     const clientCenterX = document.body.style.width / 2;
-        //     const clientCenterY = document.body.style.height / 2;
-
-        //     // Set the initial position of the semicircle
-        //     semicircle.style.left = `${centerX}px`;
-        //     semicircle.style.top = `${centerY}px`;
-        //     document.body.appendChild(semicircle);
-
-        //     // Calculate the angle between the element and the client center
-        //     const angle = Math.atan2(clientCenterY - centerY, clientCenterX - centerX) * (180 / Math.PI);
-
-        //     // Rotate the semicircle to point towards the center of the screen
-        //     semicircle.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
-
-        //     // Remove the semicircle after 5 seconds (animation duration)
-        //     setTimeout(() => {
-        //         document.body.removeChild(semicircle);
-        //     }, 5000);
-        // }
-
-        // function applySemiircleEffect() {
-        //     const terminals = document.querySelectorAll('._terminal');
-        //     terminals.forEach((terminal) => {
-        //         createSemicircleEffect(terminal);
-        //     });
-        // }
-
-        // // Repeat the effect every 5 seconds
-        // setInterval(applySemiircleEffect, 5000);
-
-    </script>
-
-    <script>
+        // save the page notes and terminals!
         const saveButton = document.getElementById('save-button');
         saveButton.addEventListener('click', () => {
             const htmlContent = document.documentElement.outerHTML;
@@ -843,10 +637,13 @@
             document.body.removeChild(link);
 
         });
-    </script>
 
-    <script>
-        // window.onload
+
+        // on load check if terminals already exist to know if it's
+        // automation task
+        window.onload = function () {
+
+        }
     </script>
 
 
