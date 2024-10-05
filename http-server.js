@@ -59,7 +59,6 @@ io.on('connection', (socket) => {
 
     // Handle new terminal request
     socket.on('new-terminal', (data) => {
-        var terminalId = data.terminalId;
 
         // Create a new shell for this terminal instance
         const shell = pty.spawn('zsh', [], {
@@ -72,10 +71,7 @@ io.on('connection', (socket) => {
 
         shell.write("preexec(){echo XXX-$1-XXX}" + String.fromCharCode(13));
         shell.write("clear" + String.fromCharCode(13));
-        socket.emit("clear", data.terminal_Id);
-
-        // Store the terminal instance associated with the socket
-        terminals[terminalId] = shell;
+        socket.emit("clear");
 
         // Handle data from the shell
         shell.on('data', (data) => {
@@ -90,14 +86,14 @@ io.on('connection', (socket) => {
                 data = data.replace(regex, '').trim(); // Remove the matched part and trim any extra spaces
                 console.log(extractedCommand);
                 if (command == "cls" || command == "clear") {
-                    socket.emit("clear", { terminal_Id, });
+                    socket.emit("clear");
                 }
                 else if (command == "exit") {
                     console.log('attempting to exit from client');
-                    socket.emit('exit', { terminal_Id, });
+                    socket.emit('exit');
                 }
                 else {
-                    socket.emit("command", { terminal_Id : 0, extractedCommand });
+                    socket.emit("command", { extractedCommand });
                 }
             }
 

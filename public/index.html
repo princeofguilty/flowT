@@ -164,6 +164,20 @@
 
         var activebody = document.getElementById("activebody");
 
+        // create these elements for each terminal to store data, and put them in
+        // if already exists? update
+        function terminal_custom_data_saver(term, termDiv, lastCommand) {
+            termDiv.setAttribute('fontSize', term.options.fontSize);
+            termDiv.setAttribute('lastCommand', lastCommand);
+        }
+
+        // data retrival
+        function terminal_custom_data_retriver(termDiv) {
+            const fontSize = termDiv.getAttribute('fontsize');
+            const lastCommand = termDiv.getAttribute('lastCommand')
+            return { fontSize, lastCommand }
+        }
+
         // make something draggable ?
         // what about element & target ??
         // for examle, you can drag a terminal from terminal header
@@ -212,7 +226,7 @@
 
         // SPAWN A TERMINAL!
         const spawnButton = document.getElementById('spawn-button');
-        window.terminals = {}; // Store terminals by ID
+        // window.terminals = {}; // Store terminals by ID
         let terminalCount = 0; // Count of terminals
 
         spawnButton.addEventListener('click', () => {
@@ -260,6 +274,9 @@
             terminalDiv.style.height = '450px';
             terminalDiv.style.scale = 1;
 
+            const termSize = document.createElement('div');
+
+
             var term = new Terminal({
                 cursorBlink: true,
                 scrollback: 1000,
@@ -281,6 +298,8 @@
             // refresh font size to refresh font face!! weird? I know.
             setTimeout(() => {
                 term.options.fontSize = 16;
+                // Save
+                terminal_custom_data_saver(term, terminalDiv, "");
             }, 50);
 
             // fit fit fit
@@ -291,7 +310,7 @@
             // Store the terminal instance
             const socket = io();
             var last_command = ""
-            window.terminals[id] = { termDiv: terminalDiv, term, socket, last_command }; // Connect a new socket for each terminal
+            // window.terminals[id] = { termDiv: terminalDiv, term, socket, last_command }; // Connect a new socket for each terminal
 
             // Handle input/output as needed
             term.onData((data) => {
@@ -326,14 +345,12 @@
 
 
             socket.on('clear', (data) => {
-                console.log(data);
-                if (data.terminal_Id === id) {
-                    term.reset();
-                }
+                term.clear();
             });
 
             socket.on('command', (data) => {
-                window.terminals[data.terminal_Id].last_command = data.command;
+                // Save
+                terminal_custom_data_saver(term, terminalDiv, data.extractedCommand);
             });
 
             // Listen for exit event from the server and destroy terminal
@@ -342,7 +359,7 @@
                 if (data.terminal_Id === id) {
                     term.dispose(); // Dispose the terminal instance
                     document.getElementById('termDiv' + id).remove(); // Remove the terminal div
-                    delete window.terminals[id]; // Remove the terminal instance from the store
+                    // delete window.terminals[id]; // Remove the terminal instance from the store
                     document.getElementById("activeTerms").innerText = Number(document.getElementById("activeTerms").innerText) - 1;
                 }
             });
