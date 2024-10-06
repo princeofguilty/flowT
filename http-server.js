@@ -136,6 +136,7 @@ io.on('connection', (socket) => {
             if (new_w <= 0 || new_h <= 0 || new_w == undefined || new_h == undefined)
                 return;
 
+            console.log("resizing to: " + new_w + "," + new_h);
             shell.resize(new_w, new_h);
         });
     });
