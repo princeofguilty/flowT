@@ -245,7 +245,7 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
     // Listen for exit event from the server and destroy terminal
     socket.on('exit', (data) => {
         term.dispose(); // Dispose the terminal instance
-        document.getElementById('termDiv' + ).remove(); // Remove the terminal div
+        document.getElementById('termDiv' + id).remove(); // Remove the terminal div
         document.getElementById("activeTerms").innerText = Number(document.getElementById("activeTerms").innerText) - 1;
     });
 
