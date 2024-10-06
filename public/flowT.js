@@ -70,7 +70,7 @@ function makeDraggable(element, target) {
 // SPAWN A TERMINAL!
 const spawnButton = document.getElementById('spawn-button');
 // window.terminals = {}; // Store terminals by ID
-if(!document.getElementsByClassName('_terminal'))
+if (!document.getElementsByClassName('_terminal'))
     var terminalCount = 0; // Count of terminals
 else
     var terminalCount = document.body.getAttribute('activeTerms');
@@ -129,13 +129,13 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
     else {
         var terminalDiv = existing_term_Div;
         var terminalHeader = existing_term_Div.querySelector('.terminal-header');
-        
+
         id = terminalDiv.getAttribute('termID');
 
         // var terminalBody = existing_term_Div.querySelector('.terminal-body');
 
         existing_term_Div.querySelector('.terminal-body').remove();
-        
+
         // create a new body please
         var terminalBody = document.createElement('div');
         terminalBody.className = 'terminal-body';
@@ -143,7 +143,7 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
 
         terminalDiv.appendChild(terminalBody)
         //
-        
+
         var terminalDiv = existing_term_Div;
         var order = existing_term_Div.querySelector('group_order');
         var { fontSize, lastCommand } = terminal_custom_data_retriver(terminalDiv);
@@ -521,7 +521,7 @@ saveButton.addEventListener('click', () => {
     // Create an anchor element and set it up for downloading the file
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = 'webpage.html'; // The filename you want to save it as
+    link.download = 'webpage' + document.getElementById("project-name").textContent + '.html'; // The filename you want to save it as
 
     // Trigger the download by simulating a click
     // document.body.appendChild(link);
