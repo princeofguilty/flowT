@@ -14,10 +14,16 @@
             font-style: normal;
         }
 
+        html {
+            overflow: scroll;
+        }
+
         .box {
             position: absolute;
             font-size: 40px;
             text-wrap: nowrap;
+            z-index: 1;
+            color: #fff;
         }
 
         .fixed-div {
@@ -39,6 +45,9 @@
             /* Shadow effect */
             z-index: 10000;
             /* Ensures it's above other elements */
+            user-select: none;
+            /* WATCHOUT!! I have a boyfriend! */
+            font-size: 18px;
         }
 
         body {
@@ -62,6 +71,9 @@
 
             background-size: 90px 90px;
             /* Spacing between lines */
+
+            /* always show scrollbars */
+            overflow: scroll;
         }
 
         ._terminal {
@@ -144,11 +156,11 @@
 <body>
     <div id="activebody" class="custom-scale"></div>
     <h1 class="fixed-div"
-        style="top: 0px;left: 20px; color:black; background-color: transparent; z-index: auto; width: 500px;">
+        style="top: 0px;left: 20px; background-color: transparent; z-index: auto; width: 500px; font-size: xx-large;">
         Multi-Terminal Application</h1>
     <button class="fixed-div" id="spawn-button">Spawn Terminal</button>
-    <button class="fixed-div" style="right: 220px;" id="save-button">Save</button>
-    <div class="fixed-div" style="height: 20px; right: 330px; color: white;" id="activeTerms">0</div>
+    <button class="fixed-div" style="right: 250px;" id="save-button">Save</button>
+    <div class="fixed-div" style="height: 20px; top: 43px; right: 350px; color: white;" id="activeTerms">0</div>
     <div class="indicator-container" id="indicatorContainer"></div>
 
     <!-- use server ip to be able to retrieve data on page saving!
@@ -169,6 +181,7 @@
         function terminal_custom_data_saver(term, termDiv, lastCommand) {
             termDiv.setAttribute('fontSize', term.options.fontSize);
             termDiv.setAttribute('lastCommand', lastCommand);
+            document.body.setAttribute('activeTerms', document.getElementById("activeTerms").innerText);
         }
 
         // data retrival
@@ -227,55 +240,80 @@
         // SPAWN A TERMINAL!
         const spawnButton = document.getElementById('spawn-button');
         // window.terminals = {}; // Store terminals by ID
-        let terminalCount = 0; // Count of terminals
+        if(!document.getElementsByClassName('_terminal'))
+            var terminalCount = 0; // Count of terminals
+        else
+            var terminalCount = document.body.getAttribute('activeTerms');
 
         spawnButton.addEventListener('click', () => {
             const terminalId = terminalCount++;
-            document.getElementById("activeTerms").innerText = Number(document.getElementById("activeTerms").innerText) + 1; createTerminal(terminalId);
+            document.body.setAttribute('activeTerms', terminalCount);
+            document.getElementById("activeTerms").innerText = Number(document.getElementById("activeTerms").innerText) + 1;
+            createTerminal(terminalId);
         });
 
         // variable for stacking terminals!
         let clicks_counter = 0;
 
-        // make a new terminal ??
-        function createTerminal(id) {
-            const terminalDiv = document.createElement('div');
-            terminalDiv.className = '_terminal';
-            terminalDiv.style.left = Number(Number(window.scrollX) + Number(Math.random() * 600)) + "px"; // Random initial position
-            terminalDiv.style.top = Number(Number(window.scrollY) + Number(Math.random() * 400)) + "px"; // Random initial position
-            terminalDiv.id = "termDiv" + id;
+        // make a new terminal ?? note, use shell full path please ^u^
+        // if there's existing_term_div, ignores id
+        function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = null) {
+            if (existing_term_Div == null) {
+                var terminalDiv = document.createElement('div');
+                terminalDiv.className = '_terminal';
+                terminalDiv.style.left = Number(Number(window.scrollX) + Number(Math.random() * 600)) + "px"; // Random initial position
+                terminalDiv.style.top = Number(Number(window.scrollY) + Number(Math.random() * 400)) + "px"; // Random initial position
+                terminalDiv.id = "termDiv" + id;
 
-            const terminalHeader = document.createElement('div');
-            terminalHeader.className = 'terminal-header';
-            terminalHeader.textContent = `Terminal ${id}`;
-            terminalHeader.contentEditable = true;
-            terminalHeader.style.display = "flex";
-            terminalHeader.style.justifyContent = "space-between";
-            terminalHeader.style.paddingRight = "10px";
-            // terminalHeader.style.paddingleft = "5px";
+                var terminalHeader = document.createElement('div');
+                terminalHeader.className = 'terminal-header';
+                terminalHeader.textContent = `Terminal ${id}`;
+                terminalHeader.contentEditable = true;
+                terminalHeader.style.display = "flex";
+                terminalHeader.style.justifyContent = "space-between";
+                terminalHeader.style.paddingRight = "10px";
+                // terminalHeader.style.paddingleft = "5px";
 
-            const order = document.createElement('div');
-            order.className = 'group_order';
-            order.textContent = 'MANUAL';
-            order.style.display = "inline-block";
-            order.contentEditable = true;
-            order.style.position = "right: 20px";
-            terminalHeader.appendChild(order);
+                var order = document.createElement('div');
+                order.className = 'group_order';
+                order.textContent = 'MANUAL';
+                order.style.display = "inline-block";
+                order.contentEditable = true;
+                order.style.position = "right: 20px";
+                terminalHeader.appendChild(order);
 
-            const terminalBody = document.createElement('div');
-            terminalBody.className = 'terminal-body';
-            terminalBody.id = "termBody" + id;
+                var terminalBody = document.createElement('div');
+                terminalBody.className = 'terminal-body';
+                terminalBody.id = "termBody" + id;
 
-            terminalDiv.appendChild(terminalHeader);
-            terminalDiv.appendChild(terminalBody);
-            activebody.appendChild(terminalDiv);
+                terminalDiv.appendChild(terminalHeader);
+                terminalDiv.appendChild(terminalBody);
+                activebody.appendChild(terminalDiv);
 
-            terminalDiv.style.width = '800px';
-            terminalDiv.style.height = '450px';
-            terminalDiv.style.scale = 1;
+                terminalDiv.style.width = '800px';
+                terminalDiv.style.height = '450px';
+                terminalDiv.style.scale = 1;
 
-            const termSize = document.createElement('div');
+            }
+            else {
+                var terminalHeader = existing_term_Div.querySelector('.terminal-header');
+                // var terminalBody = existing_term_Div.querySelector('.terminal-body');
 
+                existing_term_Div.querySelector('.terminal-body').remove();
+                
+                // create a new body please
+                var terminalBody = document.createElement('div');
+                terminalBody.className = 'terminal-body';
+                terminalBody.id = "termBody" + document.body.getAttribute('activeTerms');
+
+                var terminalDiv = existing_term_Div;
+                terminalDiv.appendChild(terminalBody)
+                //
+                
+                var terminalDiv = existing_term_Div;
+                var order = existing_term_Div.querySelector('group_order');
+                var { fontSize, lastCommand } = terminal_custom_data_retriver(terminalDiv);
+            }
 
             var term = new Terminal({
                 cursorBlink: true,
@@ -295,11 +333,17 @@
             // here it comes ^-^
             term.open(terminalBody);
 
+            term.clear();
+
             // refresh font size to refresh font face!! weird? I know.
             setTimeout(() => {
-                term.options.fontSize = 16;
-                // Save
-                terminal_custom_data_saver(term, terminalDiv, "");
+                if (existing_term_Div)
+                    term.options.fontSize = fontSize;
+                else {
+                    term.options.fontSize = 16;
+                    // Save
+                    terminal_custom_data_saver(term, terminalDiv, "");
+                }
             }, 50);
 
             // fit fit fit
@@ -308,9 +352,12 @@
             fitAddon.fit();
 
             // Store the terminal instance
-            const socket = io();
-            var last_command = ""
-            // window.terminals[id] = { termDiv: terminalDiv, term, socket, last_command }; // Connect a new socket for each terminal
+            const socket = io('http://127.0.0.1:3000', {
+                rejectUnauthorized: false,
+            });
+
+            if (!existing_term_Div)
+                var lastCommand = ""
 
             // Handle input/output as needed
             term.onData((data) => {
@@ -322,7 +369,14 @@
             });
 
             // Create a new shell on the server when the terminal is created
-            socket.emit('new-terminal');
+            if (!existing_term_Div)
+                socket.emit('new-terminal', shell);
+            else {
+                // force resize if existing term!
+                resizeTerminal();
+                term.clear();
+                socket.emit('new-terminal', lastCommand);
+            }
 
             // Function to resize the terminal
             function resizeTerminal() {
@@ -335,12 +389,13 @@
                 socket.emit('resize', { id, new_w, new_h });
             }
 
-
+            // manage resizing! nothing is easy
             new ResizeObserver(resizeTerminal).observe(terminalDiv);
             term.onResize(({ cols, rows }) => {
                 resizeTerminal();
+                // Save
+                terminal_custom_data_saver(term, terminalDiv, lastCommand);
             });
-
 
             socket.on('clear', (data) => {
                 term.clear();
@@ -349,18 +404,15 @@
             socket.on('command', (data) => {
                 term.write(data.data);
                 // Save
-                terminal_custom_data_saver(term, terminalDiv, data.extractedCommand);
+                lastCommand = data.extractedCommand;
+                terminal_custom_data_saver(term, terminalDiv, lastCommand);
             });
 
             // Listen for exit event from the server and destroy terminal
             socket.on('exit', (data) => {
-                console.log(data);
-                if (data.terminal_Id === id) {
-                    term.dispose(); // Dispose the terminal instance
-                    document.getElementById('termDiv' + id).remove(); // Remove the terminal div
-                    // delete window.terminals[id]; // Remove the terminal instance from the store
-                    document.getElementById("activeTerms").innerText = Number(document.getElementById("activeTerms").innerText) - 1;
-                }
+                term.dispose(); // Dispose the terminal instance
+                document.getElementById('termDiv' + id).remove(); // Remove the terminal div
+                document.getElementById("activeTerms").innerText = Number(document.getElementById("activeTerms").innerText) - 1;
             });
 
 
@@ -375,21 +427,13 @@
                 const mouseX = event.clientX - rect.left;
                 const mouseY = event.clientY - rect.top;
 
-                // Set transform origin based on mouse position
-                // target.style.transformOrigin = `${mouseX}px ${mouseY}px`;
-
                 if (event.deltaY > 0) {
-                    // Scroll up
-                    // console.log("up");
-                    // div.style.scale = Number(div.style.scale) + Number(scale)
                     term.options.fontSize += 0.1;
-
                 } else {
-                    // Scroll down
-                    // console.log("down");
-                    // div.style.scale = Number(div.style.scale) - Number(scale)
                     term.options.fontSize -= 0.1;
                 }
+                // Save
+                terminal_custom_data_saver(term, terminalDiv, lastCommand);
                 fitAddon.fit();
             }
 
@@ -529,7 +573,7 @@
 
         document.body.addEventListener('mousedown', function (event) {
             // Check if the clicked target or its closest parent contains ._terminal or ._box
-            if (!event.target.closest('._terminal') && !event.target.closest('._box')) {
+            if (!event.target.closest('._terminal') && !event.target.closest('.box')) {
                 isDragging = true;
 
                 // Record the initial mouse position and scroll position
@@ -650,15 +694,22 @@
             link.click();
 
             // Clean up by removing the link element
-            document.body.removeChild(link);
+            // document.body.removeChild(link);
 
         });
 
 
         // on load check if terminals already exist to know if it's
-        // automation task
+        // an automation task
         window.onload = function () {
+            const terminalsDiv = document.getElementsByClassName('_terminal');
+            if (terminalsDiv) { // automation mode activated ! 
 
+                for (const terminalDiv of terminalsDiv) {
+                    createTerminal(-1, "meow", terminalDiv);
+                }
+
+            }
         }
     </script>
 

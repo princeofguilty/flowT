@@ -10,35 +10,36 @@ const { exit } = require('process');
 const fs = require('fs');
 const os = require('os');
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+const fav_shell = "/usr/bin/zsh"
 
-// function getLastCommand() {
-//     return execSync("cat /dev/shm/last_command", { encoding: 'utf-8' }).trim();
-// }
-
-// // Function to get the last executed command
-// function getLastCommand() {
-//     // Path to the history file
-//     const historyFile = `${process.env.HOME}/.last_command`;
-//     try {
-//         const history = fs.readFileSync(historyFile, 'utf8');
-//         return history.toString().trim();
-//     } catch (err) {
-//         // console.error('Error reading history file:', err);
-//         return "";
-//     }
-// }
+// const app = express();
+// const server = http.createServer(app);
+// const io = new Server(server);
 
 // Serve static files (your index.html)
-app.use(
-    (req, res, next) => {
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        next();
+// app.use(
+//     (req, res, next) => {
+//         res.setHeader('Access-Control-Allow-Origin', '*');
+//         next();
+//     },
+//     express.static('public')
+// );
+
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: '*', // Allow all origins (for development)
+        methods: ['GET', 'POST'],
+        allowedHeaders: ['Content-Type'],
+        // credentials: true // Include credentials if needed
     },
-    express.static('public')
-);
+});
+
+app.use(cors(),
+express.static('public')
+); // Enable CORS for all routes
 
 
 // app.use();
@@ -58,10 +59,18 @@ io.on('connection', (socket) => {
     io._opts.cookie = false; // Disable cookies to reduce overhead
 
     // Handle new terminal request
-    socket.on('new-terminal', (data) => {
+    socket.on('new-terminal', (shell) => {
+        console.log(shell);
+        var command = null;
+        // exit();
+        if(shell != fav_shell){
+            // it is a command not a shell
+            command = shell;
+            shell = fav_shell;
+        }
 
         // Create a new shell for this terminal instance
-        const shell = pty.spawn('zsh', [], {
+        shell = pty.spawn(shell, [], {
             name: 'xterm-color',
             cols: 80,
             rows: 30,
@@ -69,9 +78,14 @@ io.on('connection', (socket) => {
             env: process.env,
         });
 
+
+        // code 13: Enter
+        // some code to easily track last executed command
         shell.write("preexec(){echo XXX-$1-XXX}" + String.fromCharCode(13));
         shell.write("clear" + String.fromCharCode(13));
         socket.emit("clear");
+        if(command)
+            shell.write(command + String.fromCharCode(13));
 
         // Handle data from the shell
         shell.on('data', (data) => {
@@ -85,10 +99,10 @@ io.on('connection', (socket) => {
                 // Remove the extracted text and the markers from the original string
                 data = data.replace(regex, '').trim(); // Remove the matched part and trim any extra spaces
                 console.log(extractedCommand);
-                if (command == "cls" || command == "clear") {
+                if (extractedCommand == "cls" || extractedCommand == "clear") {
                     socket.emit("clear");
                 }
-                else if (command == "exit") {
+                else if (extractedCommand == "exit") {
                     console.log('attempting to exit from client');
                     socket.emit('exit');
                 }
@@ -101,29 +115,10 @@ io.on('connection', (socket) => {
         });
 
 
-        var command = ""
         // Handle input from the client
         socket.on('input', (inputData) => {
             const data = inputData;
             shell.write(data);
-            // console.log(data.charCodeAt(0));
-            // if (terminals[terminal_Id]) {
-
-            //     if (data.charCodeAt(0) == 13) {
-            //         command = getLastCommand();
-            //         console.log(command);
-            //         if (command == "cls" || command == "clear") {
-            //             socket.emit("clear", { terminal_Id, });
-            //         }
-            //         else if (command == "exit") {
-            //             console.log('attempting to exit from client');
-            //             socket.emit('exit', { terminal_Id, });
-            //         }
-            //         else {
-            //             socket.emit("command", { terminal_Id, command });
-            //         }
-            //     }
-            // }
         });
 
 
