@@ -1,4 +1,4 @@
-
+import canvas from './canvas.js'
 
 window.addEventListener('load', function () {
     window.scrollTo(document.body.clientWidth * 1 / 3, document.body.clientHeight * 1 / 3);
@@ -47,7 +47,7 @@ function makeDraggable(element, target) {
     });
 
     element.addEventListener('pointermove', (event) => {
-        if (!isDragging) return;
+        if (!isDragging || !event.target) return;
 
         // Calculate new position
         const newX = event.clientX - offsetX + window.scrollX;
@@ -56,6 +56,25 @@ function makeDraggable(element, target) {
         // Update element position
         target.style.left = `${newX}px`;
         target.style.top = `${newY}px`;
+
+        const div = target.children[0]
+        if (div.hasAttribute('parent')) {
+            // Get the center coordinates of both elements
+            const start = canvas.getCenterCoordinates(div.getAttribute('parent'), true);
+            const end = canvas.getCenterCoordinates(div, false);
+
+            // Draw a line between the centers of X and Y
+            canvas.drawLine(start, end, div.getAttribute('parent'), div.id);
+        }
+        if (div.hasAttribute('child')) {
+            // Get the center coordinates of both elements
+            const start = canvas.getCenterCoordinates(div.getAttribute('child'));
+            const end = canvas.getCenterCoordinates(div, true);
+
+            // Draw a line between the centers of X and Y
+            canvas.drawLine(end, start, div.id, div.getAttribute('child'));
+        }
+
     });
 
     element.addEventListener('pointerup', () => {
@@ -65,6 +84,7 @@ function makeDraggable(element, target) {
     element.addEventListener('pointercancel', () => {
         isDragging = false;
     });
+
 }
 
 // SPAWN A TERMINAL!
@@ -91,18 +111,27 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
     if (existing_term_Div == null) {
         var terminalDiv = document.createElement('div');
         terminalDiv.className = '_terminal';
-        terminalDiv.style.left = Number(Number(window.scrollX) + Number(Math.random() * 600)) + "px"; // Random initial position
-        terminalDiv.style.top = Number(Number(window.scrollY) + Number(Math.random() * 400)) + "px"; // Random initial position
+        // terminalDiv.style.left = Number(Number(window.scrollX) + Number(Math.random() * 600)) + "px"; // Random initial position
+        // terminalDiv.style.top = Number(Number(window.scrollY) + Number(Math.random() * 400)) + "px"; // Random initial position
         terminalDiv.id = "termDiv" + id;
         terminalDiv.setAttribute('termID', id);
 
+
+
         var terminalHeader = document.createElement('div');
         terminalHeader.className = 'terminal-header';
+        terminalHeader.id = "termHead" + id;
         terminalHeader.textContent = `Terminal ${id}`;
-        terminalHeader.contentEditable = true;
+        terminalHeader.contentEditable = false;
         terminalHeader.style.display = "flex";
         terminalHeader.style.justifyContent = "space-between";
         terminalHeader.style.paddingRight = "10px";
+        terminalHeader.addEventListener('click', () => {
+            terminalHeader.contentEditable = true;
+        })
+        terminalHeader.addEventListener('focusout', () => {
+            terminalHeader.contentEditable = false;
+        })
         // terminalHeader.style.paddingleft = "5px";
 
         var order = document.createElement('div');
@@ -111,6 +140,12 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
         order.style.display = "inline-block";
         order.contentEditable = true;
         order.style.position = "right: 20px";
+        order.addEventListener('click', () => {
+            order.contentEditable = true;
+        })
+        order.addEventListener('focusout', () => {
+            order.contentEditable = false;
+        })
         terminalHeader.appendChild(order);
 
         var terminalBody = document.createElement('div');
@@ -119,16 +154,28 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
 
         terminalDiv.appendChild(terminalHeader);
         terminalDiv.appendChild(terminalBody);
-        activebody.appendChild(terminalDiv);
+        var container = document.createElement('div');
+        container.className = "container";
+        container.appendChild(terminalDiv)
+        container.style.left = Number(Number(window.scrollX) + Number(Math.random() * 600)) + "px"; // Random initial position
+        container.style.top = Number(Number(window.scrollY) + Number(Math.random() * 400)) + "px"; // Random initial position
+        activebody.appendChild(container);
 
         terminalDiv.style.width = '800px';
         terminalDiv.style.height = '450px';
         terminalDiv.style.scale = 1;
 
+        canvas.add_lineBall_to(container);
     }
     else {
         var terminalDiv = existing_term_Div;
         var terminalHeader = existing_term_Div.querySelector('.terminal-header');
+        terminalHeader.addEventListener('click', () => {
+            terminalHeader.contentEditable = true;
+        })
+        terminalHeader.addEventListener('focusout', () => {
+            terminalHeader.contentEditable = false;
+        })
 
         id = terminalDiv.getAttribute('termID');
 
@@ -162,7 +209,37 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
     terminalDiv.style.zIndex = clicks_counter;
 
     // Make the terminal draggable
-    makeDraggable(terminalHeader, terminalDiv);
+    makeDraggable(terminalHeader, container);
+
+    // allow dragging into
+    terminalDiv.addEventListener('dragover', (event) => {
+        event.preventDefault();
+        // console.log("allow dragging into");
+    });
+
+    terminalDiv.addEventListener('drop', (event) => {
+        event.preventDefault();
+        if (window.dragSourceT.className === "_terminal") {
+            console.log("dragSourceT:" + window.dragSourceT.id);
+            console.log("dragSourceB:" + window.dragSourceB.id);
+            // now you follow someone!
+            // terminalDiv is parent
+            // window.dragSourceT
+            terminalDiv.setAttribute("parent", window.dragSourceT.id);
+            window.dragSourceT.setAttribute("child", terminalDiv.id);
+
+            // Get the center coordinates of both elements
+            const start = canvas.getCenterCoordinates(terminalDiv.getAttribute('parent'), true);
+            const end = canvas.getCenterCoordinates(terminalDiv);
+
+            // Draw a line between the centers of X and Y
+            canvas.drawLine(start, end, window.dragSourceT.id, terminalDiv.id);
+
+            //clear window.dragSource
+            window.dragSourceT = null;
+            window.dragSourceB = null
+        }
+    });
 
     // here it comes ^-^
     term.open(terminalBody);
@@ -295,14 +372,14 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
         terminalDiv.style.zIndex = clicks_counter;
     });
 
-    terminalDiv.addEventListener('mouseover', () => {
-        body.classList.add('no-scroll');
-    });
+    // terminalDiv.addEventListener('mouseover', () => {
+    //     body.classList.add('no-scroll');
+    // });
 
     // Enable body scrolling again when mouse leaves the terminal
-    terminalDiv.addEventListener('mouseleave', () => {
-        body.classList.remove('no-scroll');
-    });
+    // terminalDiv.addEventListener('mouseleave', () => {
+    //     body.classList.remove('no-scroll');
+    // });
 
     terminalDiv.addEventListener('wheel', (event) => {
         let currentScale = Number(document.querySelector("._terminal").style.scale);
@@ -407,7 +484,8 @@ document.body.style.scrollBehavior = 'smooth'; // Enable smooth scrolling behavi
 
 document.body.addEventListener('mousedown', function (event) {
     // Check if the clicked target or its closest parent contains ._terminal or ._box
-    if (!event.target.closest('._terminal') && !event.target.closest('.box')) {
+    if (!event.target.closest('._terminal') && !event.target.closest('.box') &&
+        !event.target.closest('.container') && !event.target.closest('.pearl')) {
         isDragging = true;
 
         // Record the initial mouse position and scroll position
