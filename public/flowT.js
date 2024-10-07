@@ -191,6 +191,8 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
         terminalDiv.appendChild(terminalBody)
         //
 
+        var container = terminalDiv.closest('.container');
+
         var terminalDiv = existing_term_Div;
         var order = existing_term_Div.querySelector('group_order');
         var { fontSize, lastCommand } = terminal_custom_data_retriver(terminalDiv);
@@ -591,10 +593,16 @@ setInterval(createCircleEffect, 15000);
 // save the page notes and terminals!
 const saveButton = document.getElementById('save-button');
 saveButton.addEventListener('click', () => {
+    // destroy lines temporarly
+    canvas.destroy_lines();
+
     const htmlContent = document.documentElement.outerHTML;
 
     // Create a Blob with the HTML content
     const blob = new Blob([htmlContent], { type: 'text/html' });
+
+    // restore lines
+    canvas.refresh_lines();
 
     // Create an anchor element and set it up for downloading the file
     const link = document.createElement('a');
@@ -620,6 +628,6 @@ window.onload = function () {
         for (const terminalDiv of terminalsDiv) {
             createTerminal(-1, "meow", terminalDiv);
         }
-
     }
+    canvas.refresh_lines();
 }

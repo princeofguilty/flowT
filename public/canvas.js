@@ -25,7 +25,6 @@ let pearl = `.pearl {
 window.lines = {};
 
 const style = document.createElement('style');
-style.type = 'text/css';
 // Append the CSS rules to the <style> element
 style.appendChild(document.createTextNode(pearl));
 // Append the <style> element to the <head> of the document
@@ -86,7 +85,7 @@ function drawLine(start, end, parent_id, child_id) {
     const length = Math.sqrt((end.x - start.x) ** 2 + (end.y - start.y) ** 2);
     const angle = Math.atan2(end.y - start.y, end.x - start.x) * (180 / Math.PI);
     let line;
-    const id = parent_id + child_id;
+    const id = parent_id + '>' + child_id;
 
     if (!lines[id]) {
         line = document.createElement('div');
@@ -104,6 +103,28 @@ function drawLine(start, end, parent_id, child_id) {
     line.style.transform = `rotate(${angle}deg)`;
 }
 
+function refresh_lines() {
+    document.querySelectorAll('._terminal').forEach(t => {
+        if (t.hasAttribute('child')) {
+            // Get the center coordinates of both elements
+            const start = getCenterCoordinates(t, true);
+            const child = document.getElementById(t.getAttribute('child'));
+            const end = getCenterCoordinates(child);
+
+            // Draw a line between the centers of X and Y
+            drawLine(start, end, t.id, child.id);
+            // add_lineBall_to(t.closest('.container'));
+        }
+    });
+}
+
+
+function destroy_lines() {
+    document.querySelectorAll('.line').forEach(t => {
+        document.body.removeChild(t);
+    });
+    lines = {};
+}
 
 
 
@@ -183,4 +204,4 @@ elementY.addEventListener('drop', (event) => {
 
 */
 
-export default { add_lineBall_to, getCenterCoordinates, drawLine };
+export default { add_lineBall_to, getCenterCoordinates, drawLine, refresh_lines, destroy_lines };
