@@ -1,5 +1,7 @@
 import canvas from './canvas.js'
 
+// windows.new_changes = false;
+
 window.addEventListener('load', function () {
     window.scrollTo(document.body.clientWidth * 1 / 3, document.body.clientHeight * 1 / 3);
 });
@@ -10,8 +12,10 @@ var activebody = document.getElementById("activebody");
 // if already exists? update
 function terminal_custom_data_saver(term, termDiv, lastCommand) {
     termDiv.setAttribute('fontSize', term.options.fontSize);
-    termDiv.setAttribute('lastCommand', lastCommand);
+    if (lastCommand != "$1")
+        termDiv.setAttribute('lastCommand', lastCommand);
     document.body.setAttribute('activeTerms', document.getElementById("activeTerms").innerText);
+    // windows.new_changes = true;
 }
 
 // data retrival
@@ -30,10 +34,6 @@ function terminal_custom_data_retriver(termDiv) {
 // to drag something normally, make element and target
 // just the same
 function makeDraggable(element, target) {
-    const body = document.body.style;
-    const centerX = body.width / 2;
-    const centerY = body.height / 2;
-
     let isDragging = false;
     let offsetX, offsetY;
 
@@ -49,6 +49,8 @@ function makeDraggable(element, target) {
     element.addEventListener('pointermove', (event) => {
         if (!isDragging || !event.target) return;
 
+        // windows.new_changes = true;
+
         // Calculate new position
         const newX = event.clientX - offsetX + window.scrollX;
         const newY = event.clientY - offsetY + window.scrollY;
@@ -57,22 +59,24 @@ function makeDraggable(element, target) {
         target.style.left = `${newX}px`;
         target.style.top = `${newY}px`;
 
-        const div = target.children[0]
-        if (div.hasAttribute('parent')) {
-            // Get the center coordinates of both elements
-            const start = canvas.getCenterCoordinates(div.getAttribute('parent'), true);
-            const end = canvas.getCenterCoordinates(div, false);
+        if (element.className == "_terminal") {
+            const div = target.children[0]
+            if (div.hasAttribute('parent')) {
+                // Get the center coordinates of both elements
+                const start = canvas.getCenterCoordinates(div.getAttribute('parent'), true);
+                const end = canvas.getCenterCoordinates(div, false);
 
-            // Draw a line between the centers of X and Y
-            canvas.drawLine(start, end, div.getAttribute('parent'), div.id);
-        }
-        if (div.hasAttribute('child')) {
-            // Get the center coordinates of both elements
-            const start = canvas.getCenterCoordinates(div.getAttribute('child'));
-            const end = canvas.getCenterCoordinates(div, true);
+                // Draw a line between the centers of X and Y
+                canvas.drawLine(start, end, div.getAttribute('parent'), div.id);
+            }
+            if (div.hasAttribute('child')) {
+                // Get the center coordinates of both elements
+                const start = canvas.getCenterCoordinates(div.getAttribute('child'));
+                const end = canvas.getCenterCoordinates(div, true);
 
-            // Draw a line between the centers of X and Y
-            canvas.drawLine(end, start, div.id, div.getAttribute('child'));
+                // Draw a line between the centers of X and Y
+                canvas.drawLine(end, start, div.id, div.getAttribute('child'));
+            }
         }
 
     });
@@ -100,6 +104,7 @@ spawnButton.addEventListener('click', () => {
     document.body.setAttribute('activeTerms', terminalCount);
     document.getElementById("activeTerms").innerText = Number(document.getElementById("activeTerms").innerText) + 1;
     createTerminal(terminalId);
+    // windows.new_changes = true;
 });
 
 // variable for stacking terminals!
@@ -166,6 +171,7 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
         terminalDiv.style.scale = 1;
 
         canvas.add_lineBall_to(container);
+        // windows.new_changes = true;
     }
     else {
         var terminalDiv = existing_term_Div;
@@ -222,8 +228,9 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
     terminalDiv.addEventListener('drop', (event) => {
         event.preventDefault();
         if (window.dragSourceT.className === "_terminal") {
-            console.log("dragSourceT:" + window.dragSourceT.id);
-            console.log("dragSourceB:" + window.dragSourceB.id);
+            // console.log("dragSourceT:" + window.dragSourceT.id);
+            // console.log("dragSourceB:" + window.dragSourceB.id);
+            // windows.new_changes = true;
             // now you follow someone!
             // terminalDiv is parent
             // window.dragSourceT
@@ -275,10 +282,12 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
     // Handle input/output as needed
     term.onData((data) => {
         socket.emit('input', data);
+        // windows.new_changes = true;
     });
 
     socket.on('output', (data) => {
         term.write(data);
+        // windows.new_changes = true;
     });
 
     // Create a new shell on the server when the terminal is created
@@ -300,6 +309,7 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
         terminalBody.style.width = "100%";
         terminalBody.style.height = 'calc(100% - 30px)';
         socket.emit('resize', { id, new_w, new_h });
+        // windows.new_changes = true;
     }
 
     // manage resizing! nothing is easy
@@ -326,6 +336,7 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
         term.dispose(); // Dispose the terminal instance
         document.getElementById('termDiv' + id).remove(); // Remove the terminal div
         document.getElementById("activeTerms").innerText = Number(document.getElementById("activeTerms").innerText) - 1;
+        // windows.new_changes = true;
     });
 
 
@@ -372,6 +383,7 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
     terminalDiv.addEventListener('click', () => {
         clicks_counter += 1;
         terminalDiv.style.zIndex = clicks_counter;
+        // windows.new_changes = true;
     });
 
     // terminalDiv.addEventListener('mouseover', () => {
@@ -392,13 +404,14 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
             // Detect zoom direction
             if (event.deltaY > 0) {
                 // Zoom in
-                currentScale = Math.min(currentScale * 1.05, 3); // Limit max scale to 3x
+                currentScale = Math.min(currentScale * 1.01, 3); // Limit max scale to 3x
             } else {
                 // Zoom out
-                currentScale = Math.max(currentScale * 0.95, 1); // Limit min scale to 0.5x
+                currentScale = Math.max(currentScale * 0.99, 1); // Limit min scale to 0.5x
             }
             // Apply scaling transformation
             terminalDiv.style.scale = currentScale;
+            // windows.new_changes = true;
         }
     });
 
@@ -420,14 +433,26 @@ function unescapeHTML(html) {
 }
 
 // Function to create and position a box
-function createBox(x, y, htmlContent) {
-    const box = document.createElement('div');
-    box.classList.add('box');
+function createBox(x, y, innerHTML, outerHTML = null) {
+    if (outerHTML) {
+        const tag = outerHTML.match(/<(\w+)\s/)[1];
+        document.body.children.activebody.insertAdjacentHTML('beforeend', outerHTML);
+        const last_index = document.body.children.activebody.children.length - 1;
+        var box = document.body.children.activebody.children[last_index]
+        x += window.scrollX;
+        y += window.scrollY;
+    }
+    else {
+        // Set the innerHTML to the provided HTML content
+        var box = document.createElement('div');
+        box.innerHTML = innerHTML;
+        // Append the box to the body
+        activebody.appendChild(box);
+        box.classList.add('box');
+    }
+
     box.style.left = `${x}px`;
     box.style.top = `${y}px`;
-
-    // Set the innerHTML to the provided HTML content
-    box.innerHTML = htmlContent;
     box.contentEditable = true;
 
     box.addEventListener('dblclick', function (event) {
@@ -435,15 +460,30 @@ function createBox(x, y, htmlContent) {
         box.contentEditable = true;
     });
 
-    box.addEventListener('focusout', function (event) {
-        box.contentEditable = false;
-        box.innerHTML = unescapeHTML(box.innerHTML)
+    window.box_position = null;
+    box.addEventListener('contextmenu', function (event) {
+        event.preventDefault();
+        box.contentEditable = true;
+        window.box_position = box.getBoundingClientRect();
+        let holder = box.outerHTML;
+        holder = holder.replace(/(?:\s*contenteditable="(?:true|false)"\s*|\s*style="[^"]*"\s*)/g, '');
+        box.innerText = holder;
     });
 
-    // Append the box to the body
-    activebody.appendChild(box);
+    box.addEventListener('focusout', function (event) {
+        if (window.box_position == null)
+            return;
+        window.box_position = null;
+        const new_code = unescapeHTML(box.innerHTML);
+        box.contentEditable = false;
+        createBox(box.getBoundingClientRect().left, box.getBoundingClientRect().top, "", new_code);
+        document.body.children.activebody.removeChild(box);
+    });
+
     // make the box draggable :)
     makeDraggable(box, box);
+
+    return box;
 }
 
 // Add a double-click event listener to the body to 
@@ -631,3 +671,71 @@ window.onload = function () {
     }
     canvas.refresh_lines();
 }
+
+
+window.addEventListener('beforeunload', function (event) {
+    // // event.preventDefault();
+
+    // // Set a confirmation message (this may not be displayed in some browsers)
+    // const confirmationMessage = "leaving or refreshing?? unsaved projects will be lost.";
+
+    // // For most browsers, this is required to show a confirmation dialog
+    // event.returnValue = confirmationMessage; // This is required for older browsers
+
+    // // In some modern browsers, returning a string will show a generic confirmation dialog
+    // return confirmationMessage;
+});
+
+
+const activeBody = document.getElementById('activebody');
+
+// Function to make an image resizable
+function makeImageResizable(img) {
+    const resizableDiv = document.createElement('div');
+    resizableDiv.className = 'resizable';
+    img.parentNode.insertBefore(resizableDiv, img);
+    resizableDiv.appendChild(img); // Move the img inside the new div
+
+    // Create the resizer
+    const resizer = document.createElement('div');
+    resizer.className = 'resizer';
+    resizableDiv.appendChild(resizer);
+
+    resizer.addEventListener('mousedown', function (e) {
+        e.preventDefault();
+        window.addEventListener('mousemove', resize.bind(null, resizableDiv));
+        window.addEventListener('mouseup', stopResize);
+    });
+}
+
+function resize(resizable, e) {
+    // Calculate the new width and height
+    const newWidth = e.clientX - resizable.getBoundingClientRect().left;
+    const newHeight = e.clientY - resizable.getBoundingClientRect().top;
+
+    // Set the new width and height while ensuring they are positive
+    if (newWidth > 0) {
+        resizable.style.width = newWidth + 'px';
+    }
+    if (newHeight > 0) {
+        resizable.style.height = newHeight + 'px';
+    }
+}
+
+function stopResize() {
+    window.removeEventListener('mousemove', resize);
+    window.removeEventListener('mouseup', stopResize);
+}
+
+// Observe for new elements added to the active body
+const observer = new MutationObserver((mutations) => {
+    mutations.forEach(mutation => {
+        mutation.addedNodes.forEach(node => {
+            if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'IMG') {
+                makeImageResizable(node); // Attach the resizable functionality
+            }
+        });
+    });
+});
+
+observer.observe(activeBody, { childList: true }); // Observe only direct children
