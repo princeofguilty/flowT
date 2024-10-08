@@ -30,16 +30,20 @@ style.appendChild(document.createTextNode(pearl));
 // Append the <style> element to the <head> of the document
 document.head.appendChild(style);
 
-function generate_lineBall() {
+function generate_ball() {
     const ball = document.createElement('div');
     ball.draggable = true;
     ball.className = "pearl";
     ball.id = "pearl"
+    ball.style.userSelect = "none";
+    ball.style.border = "none";
+    ball.style.zIndex = "-1";
+    ball.contentEditable = false;
     return ball;
 }
 
-function add_lineBall_to(container) {
-    const ball = generate_lineBall();
+function add_new_ball_to(container) {
+    const ball = generate_ball();
     container.appendChild(ball);
 
     // When dragging starts on element X
@@ -204,4 +208,4 @@ elementY.addEventListener('drop', (event) => {
 
 */
 
-export default { add_lineBall_to, getCenterCoordinates, drawLine, refresh_lines, destroy_lines };
+export default { add_new_ball_to, getCenterCoordinates, drawLine, refresh_lines, destroy_lines, generate_ball };

@@ -1,4 +1,5 @@
 import canvas from './canvas.js'
+import orderbox from './order.js';
 
 // windows.new_changes = false;
 
@@ -13,7 +14,7 @@ var activebody = document.getElementById("activebody");
 function terminal_custom_data_saver(term, termDiv, lastCommand) {
     termDiv.setAttribute('fontSize', term.options.fontSize);
     if (lastCommand != "$1")
-        termDiv.setAttribute('lastCommand', lastCommand);
+        termDiv.setAttribute('lastCommand', termDiv.getAttribute('lastCommand')+"]__[");
     document.body.setAttribute('activeTerms', document.getElementById("activeTerms").innerText);
     // windows.new_changes = true;
 }
@@ -52,8 +53,8 @@ function makeDraggable(element, target) {
         // windows.new_changes = true;
 
         // Calculate new position
-        const newX = event.clientX - offsetX + window.scrollX;
-        const newY = event.clientY - offsetY + window.scrollY;
+        const newX = event.clientX - offsetX + window.scrollX + (target.className == "pearl") * (- target.getBoundingClientRect().width / 2);
+        const newY = event.clientY - offsetY + window.scrollY + (target.className == "pearl") * (- target.getBoundingClientRect().height / 2);
 
         // Update element position
         target.style.left = `${newX}px`;
@@ -122,7 +123,6 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
         terminalDiv.setAttribute('termID', id);
 
 
-
         var terminalHeader = document.createElement('div');
         terminalHeader.className = 'terminal-header';
         terminalHeader.id = "termHead" + id;
@@ -139,19 +139,20 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
         })
         // terminalHeader.style.paddingleft = "5px";
 
-        var order = document.createElement('div');
-        order.className = 'group_order';
-        order.textContent = 'MANUAL';
-        order.style.display = "inline-block";
-        order.contentEditable = true;
-        order.style.position = "right: 20px";
-        order.addEventListener('click', () => {
-            order.contentEditable = true;
-        })
-        order.addEventListener('focusout', () => {
-            order.contentEditable = false;
-        })
-        terminalHeader.appendChild(order);
+        // var order = document.createElement('div');
+        // order.className = 'orderbox';
+        // order.textContent = 'MANUAL';
+        // order.style.display = "inline-block";
+        // order.contentEditable = true;
+        // order.style.position = "right: 20px";
+        // order.addEventListener('click', () => {
+        //     order.contentEditable = true;
+        // })
+        // order.addEventListener('focusout', () => {
+        //     order.contentEditable = false;
+        // })
+        var new_orderbox = orderbox.create_orderbox();
+        terminalHeader.appendChild(new_orderbox);
 
         var terminalBody = document.createElement('div');
         terminalBody.className = 'terminal-body';
@@ -170,7 +171,7 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
         terminalDiv.style.height = '450px';
         terminalDiv.style.scale = 1;
 
-        canvas.add_lineBall_to(container);
+        canvas.add_new_ball_to(container);
         // windows.new_changes = true;
     }
     else {
@@ -200,7 +201,7 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
         var container = terminalDiv.closest('.container');
 
         var terminalDiv = existing_term_Div;
-        var order = existing_term_Div.querySelector('group_order');
+        var order = existing_term_Div.querySelector('orderbox');
         var { fontSize, lastCommand } = terminal_custom_data_retriver(terminalDiv);
     }
 
@@ -264,7 +265,7 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
             // Save
             terminal_custom_data_saver(term, terminalDiv, "");
         }
-    }, 50);
+    }, 100);
 
     // fit fit fit
     let fitAddon = new FitAddon.FitAddon();
@@ -324,7 +325,7 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
         term.clear();
     });
 
-    socket.on('command', (data) => {
+    socket.on('command', () => {
         term.write(data.data);
         // Save
         lastCommand = data.extractedCommand;
@@ -332,7 +333,7 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
     });
 
     // Listen for exit event from the server and destroy terminal
-    socket.on('exit', (data) => {
+    socket.on('exit', () => {
         term.dispose(); // Dispose the terminal instance
         document.getElementById('termDiv' + id).remove(); // Remove the terminal div
         document.getElementById("activeTerms").innerText = Number(document.getElementById("activeTerms").innerText) - 1;
@@ -435,10 +436,25 @@ function unescapeHTML(html) {
 // Function to create and position a box
 function createBox(x, y, innerHTML, outerHTML = null) {
     if (outerHTML) {
-        const tag = outerHTML.match(/<(\w+)\s/)[1];
-        document.body.children.activebody.insertAdjacentHTML('beforeend', outerHTML);
-        const last_index = document.body.children.activebody.children.length - 1;
-        var box = document.body.children.activebody.children[last_index]
+        // const tag = outerHTML.match(/<(\w+)\s/)[1];
+        const container = document.createElement('div');
+        container.className = "container";
+        const tags = outerHTML.match(/<\s*[a-zA-Z][a-zA-Z0-9\-]*\s*[^>]*\/?>/g);
+        //
+
+        // document.body.children.activebody.insertAdjacentHTML('beforeend', outerHTML);
+        var ball = canvas.generate_ball();
+        container.appendChild(ball);
+        container.style.flexDirection = "column";
+        // container.style.gap = "5px";
+        container.style.justifyContent = "flex-start";
+        container.insertAdjacentHTML('beforeend', outerHTML);
+        // container.children[1].style.border = "2px solid #ccc";
+        container.contentEditable = false;
+
+        // container.children[1].style.userSelect = "none";
+        activeBody.append(container);
+        var box = container;
         x += window.scrollX;
         y += window.scrollY;
     }
@@ -449,15 +465,16 @@ function createBox(x, y, innerHTML, outerHTML = null) {
         // Append the box to the body
         activebody.appendChild(box);
         box.classList.add('box');
+        box.contentEditable = true;
     }
 
     box.style.left = `${x}px`;
     box.style.top = `${y}px`;
-    box.contentEditable = true;
 
     box.addEventListener('dblclick', function (event) {
         event.preventDefault();
         box.contentEditable = true;
+        box.style.border = "1px solid #ccc";
     });
 
     window.box_position = null;
@@ -465,7 +482,11 @@ function createBox(x, y, innerHTML, outerHTML = null) {
         event.preventDefault();
         box.contentEditable = true;
         window.box_position = box.getBoundingClientRect();
-        let holder = box.outerHTML;
+        let pointer = box;
+        while (pointer.children.length > 1 && pointer.className == "container") {
+            pointer = pointer.children[1];
+        }
+        var holder = pointer.outerHTML;
         holder = holder.replace(/(?:\s*contenteditable="(?:true|false)"\s*|\s*style="[^"]*"\s*)/g, '');
         box.innerText = holder;
     });
@@ -476,12 +497,18 @@ function createBox(x, y, innerHTML, outerHTML = null) {
         window.box_position = null;
         const new_code = unescapeHTML(box.innerHTML);
         box.contentEditable = false;
+
         createBox(box.getBoundingClientRect().left, box.getBoundingClientRect().top, "", new_code);
         document.body.children.activebody.removeChild(box);
+        box.style.border = "none";
     });
 
     // make the box draggable :)
-    makeDraggable(box, box);
+    if (!outerHTML) {
+        makeDraggable(box, box);
+    } else {
+        makeDraggable(ball, box);
+    }
 
     return box;
 }
@@ -685,57 +712,3 @@ window.addEventListener('beforeunload', function (event) {
     // // In some modern browsers, returning a string will show a generic confirmation dialog
     // return confirmationMessage;
 });
-
-
-const activeBody = document.getElementById('activebody');
-
-// Function to make an image resizable
-function makeImageResizable(img) {
-    const resizableDiv = document.createElement('div');
-    resizableDiv.className = 'resizable';
-    img.parentNode.insertBefore(resizableDiv, img);
-    resizableDiv.appendChild(img); // Move the img inside the new div
-
-    // Create the resizer
-    const resizer = document.createElement('div');
-    resizer.className = 'resizer';
-    resizableDiv.appendChild(resizer);
-
-    resizer.addEventListener('mousedown', function (e) {
-        e.preventDefault();
-        window.addEventListener('mousemove', resize.bind(null, resizableDiv));
-        window.addEventListener('mouseup', stopResize);
-    });
-}
-
-function resize(resizable, e) {
-    // Calculate the new width and height
-    const newWidth = e.clientX - resizable.getBoundingClientRect().left;
-    const newHeight = e.clientY - resizable.getBoundingClientRect().top;
-
-    // Set the new width and height while ensuring they are positive
-    if (newWidth > 0) {
-        resizable.style.width = newWidth + 'px';
-    }
-    if (newHeight > 0) {
-        resizable.style.height = newHeight + 'px';
-    }
-}
-
-function stopResize() {
-    window.removeEventListener('mousemove', resize);
-    window.removeEventListener('mouseup', stopResize);
-}
-
-// Observe for new elements added to the active body
-const observer = new MutationObserver((mutations) => {
-    mutations.forEach(mutation => {
-        mutation.addedNodes.forEach(node => {
-            if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'IMG') {
-                makeImageResizable(node); // Attach the resizable functionality
-            }
-        });
-    });
-});
-
-observer.observe(activeBody, { childList: true }); // Observe only direct children

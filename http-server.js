@@ -81,7 +81,8 @@ io.on('connection', (socket) => {
 
         // code 13: Enter
         // some code to easily track last executed command
-        shell.write("preexec(){echo XXX-$1-XXX}" + String.fromCharCode(13));
+        // shell.write("preexec(){echo XXX-'$*'-XXX}" + String.fromCharCode(13));
+        shell.write('FLOWTEXEC() { echo -e XXX-"$*"-XXX; eval "$*" && echo "XXX-OK-XXX" || echo "XXX-ERR-XXX"; }' + String.fromCharCode(13));
         shell.write("clear" + String.fromCharCode(13));
         socket.emit("clear");
         if(command)
@@ -105,6 +106,12 @@ io.on('connection', (socket) => {
                 else if (extractedCommand == "exit") {
                     console.log('attempting to exit from client');
                     socket.emit('exit');
+                }
+                else if (extractedCommand == "ERR"){
+                    socket.emit("ERR");
+                }
+                else if (extractedCommand == "OK"){
+                    socket.emit("OK");
                 }
                 else {
                     socket.emit("command", { data, extractedCommand });
