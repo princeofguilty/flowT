@@ -82,9 +82,10 @@ io.on('connection', (socket) => {
         // code 13: Enter
         // some code to easily track last executed command
         // shell.write("preexec(){echo XXX-'$*'-XXX}" + String.fromCharCode(13));
-        shell.write('FLOWTEXEC() { echo -e XXX-"$*"-XXX; eval "$*" && echo "XXX-OK-XXX" || echo "XXX-ERR-XXX"; }' + String.fromCharCode(13));
+        shell.write('rec() { echo -e XXX-"$*"-XXX; eval "$*" && echo "XXX-OK-XXX" || echo "XXX-ERR-XXX"; }' + String.fromCharCode(13));
         shell.write("clear" + String.fromCharCode(13));
         socket.emit("clear");
+        shell.write('# start your commands with rec to record them for automation' + String.fromCharCode(13));
         if(command)
             shell.write(command + String.fromCharCode(13));
 
@@ -99,7 +100,7 @@ io.on('connection', (socket) => {
 
                 // Remove the extracted text and the markers from the original string
                 data = data.replace(regex, '').trim(); // Remove the matched part and trim any extra spaces
-                console.log(extractedCommand);
+                console.log("command: "+extractedCommand);
                 if (extractedCommand == "cls" || extractedCommand == "clear") {
                     socket.emit("clear");
                 }

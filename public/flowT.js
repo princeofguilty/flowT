@@ -1,6 +1,7 @@
 import canvas from './canvas.js'
 import orderbox from './order.js';
-
+import { Unicode11Addon } from 'xterm-addon-unicode11';
+import { Terminal } from 'xterm';
 // windows.new_changes = false;
 
 window.addEventListener('load', function () {
@@ -14,7 +15,7 @@ var activebody = document.getElementById("activebody");
 function terminal_custom_data_saver(term, termDiv, lastCommand) {
     termDiv.setAttribute('fontSize', term.options.fontSize);
     if (lastCommand != "$1")
-        termDiv.setAttribute('lastCommand', termDiv.getAttribute('lastCommand')+"]__[");
+        termDiv.setAttribute('lastCommand', termDiv.getAttribute('lastCommand') + "]__[");
     document.body.setAttribute('activeTerms', document.getElementById("activeTerms").innerText);
     // windows.new_changes = true;
 }
@@ -211,7 +212,14 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
         fontFamily: 'JetBrainsMonoNerdFont',
         // rows: 10,
         // cols: 50,
+        allowProposedApi: true, // Enable proposed API
+        theme: {
+            background: '#220917'
+        }
     });
+    const unicode11Addon = new Unicode11Addon();
+    term.loadAddon(unicode11Addon);
+    term.unicode.activeVersion = '11';
 
     // stack this terminal over the previous ones
     clicks_counter++;
@@ -327,9 +335,9 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
 
     socket.on('command', (data) => {
         term.write(data.data);
-        // Save
+        // // Save
         lastCommand = data.extractedCommand;
-        terminal_custom_data_saver(term, terminalDiv, lastCommand);
+        // terminal_custom_data_saver(term, terminalDiv, lastCommand);
     });
 
     // Listen for exit event from the server and destroy terminal
@@ -338,6 +346,18 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
         document.getElementById('termDiv' + id).remove(); // Remove the terminal div
         document.getElementById("activeTerms").innerText = Number(document.getElementById("activeTerms").innerText) - 1;
         // windows.new_changes = true;
+    });
+
+    socket.on('OK', () => {
+        // Save
+        terminal_custom_data_saver(term, terminalDiv, lastCommand);
+        // term.write('rec ');
+    });
+
+    socket.on('ERR', () => {
+        term.write("#FlowT won't save this command!");
+        term.write(String.fromCharCode(13));
+        // term.write("rec ");
     });
 
 
