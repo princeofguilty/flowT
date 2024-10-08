@@ -321,11 +321,11 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
         terminal_custom_data_saver(term, terminalDiv, lastCommand);
     });
 
-    socket.on('clear', (data) => {
+    socket.on('clear', () => {
         term.clear();
     });
 
-    socket.on('command', () => {
+    socket.on('command', (data) => {
         term.write(data.data);
         // Save
         lastCommand = data.extractedCommand;
