@@ -4,6 +4,10 @@ import { Unicode11Addon } from 'xterm-addon-unicode11';
 import { Terminal } from 'xterm';
 // windows.new_changes = false;
 
+const terminal_is_done = new CustomEvent('parentisdone', {
+    detail: { id: '0' }, // Additional data
+});
+
 window.addEventListener('load', function () {
     window.scrollTo(document.body.clientWidth * 1 / 3, document.body.clientHeight * 1 / 3);
 });
@@ -14,8 +18,13 @@ var activebody = document.getElementById("activebody");
 // if already exists? update
 function terminal_custom_data_saver(term, termDiv, lastCommand) {
     termDiv.setAttribute('fontSize', term.options.fontSize);
-    if (lastCommand != "$1")
-        termDiv.setAttribute('lastCommand', termDiv.getAttribute('lastCommand') + "]__[");
+    lastCommand = lastCommand.trim();
+    if (lastCommand != "$1" && lastCommand != "" && lastCommand != "null") {
+        if (termDiv.hasAttribute('lastCommand'))
+            termDiv.setAttribute('lastCommand', termDiv.getAttribute('lastCommand') + "]__[" + lastCommand);
+        else
+            termDiv.setAttribute('lastCommand', lastCommand);
+    }
     document.body.setAttribute('activeTerms', document.getElementById("activeTerms").innerText);
     // windows.new_changes = true;
 }
@@ -61,7 +70,7 @@ function makeDraggable(element, target) {
         target.style.left = `${newX}px`;
         target.style.top = `${newY}px`;
 
-        if (element.className == "_terminal") {
+        if (target.className == "container" && target.children[0].className == "_terminal") {
             const div = target.children[0]
             if (div.hasAttribute('parent')) {
                 // Get the center coordinates of both elements
@@ -105,7 +114,7 @@ spawnButton.addEventListener('click', () => {
     const terminalId = terminalCount++;
     document.body.setAttribute('activeTerms', terminalCount);
     document.getElementById("activeTerms").innerText = Number(document.getElementById("activeTerms").innerText) + 1;
-    createTerminal(terminalId);
+    prepareTerminalElement(terminalId);
     // windows.new_changes = true;
 });
 
@@ -114,7 +123,7 @@ let clicks_counter = 0;
 
 // make a new terminal ?? note, use shell full path please ^u^
 // if there's existing_term_div, ignores id
-function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = null) {
+function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing_term_Div = null) {
     if (existing_term_Div == null) {
         var terminalDiv = document.createElement('div');
         terminalDiv.className = '_terminal';
@@ -138,20 +147,7 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
         terminalHeader.addEventListener('focusout', () => {
             terminalHeader.contentEditable = false;
         })
-        // terminalHeader.style.paddingleft = "5px";
 
-        // var order = document.createElement('div');
-        // order.className = 'orderbox';
-        // order.textContent = 'MANUAL';
-        // order.style.display = "inline-block";
-        // order.contentEditable = true;
-        // order.style.position = "right: 20px";
-        // order.addEventListener('click', () => {
-        //     order.contentEditable = true;
-        // })
-        // order.addEventListener('focusout', () => {
-        //     order.contentEditable = false;
-        // })
         var new_orderbox = orderbox.create_orderbox();
         terminalHeader.appendChild(new_orderbox);
 
@@ -164,11 +160,11 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
         var container = document.createElement('div');
         container.className = "container";
         container.appendChild(terminalDiv)
-        container.style.left = Number(Number(window.scrollX) + Number(Math.random() * 600)) + "px"; // Random initial position
-        container.style.top = Number(Number(window.scrollY) + Number(Math.random() * 400)) + "px"; // Random initial position
+        container.style.left = Number(Number(window.scrollX) + Number(Math.random() * 1000)) + "px"; // Random initial position
+        container.style.top = Number(Number(window.scrollY) + Number(Math.random() * 500)) + "px"; // Random initial position
         activebody.appendChild(container);
 
-        terminalDiv.style.width = '800px';
+        terminalDiv.style.width = '500px';
         terminalDiv.style.height = '450px';
         terminalDiv.style.scale = 1;
 
@@ -206,28 +202,14 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
         var { fontSize, lastCommand } = terminal_custom_data_retriver(terminalDiv);
     }
 
-    var term = new Terminal({
-        cursorBlink: true,
-        scrollback: 1000,
-        fontFamily: 'JetBrainsMonoNerdFont',
-        // rows: 10,
-        // cols: 50,
-        allowProposedApi: true, // Enable proposed API
-        theme: {
-            background: '#220917'
-        }
-    });
-    const unicode11Addon = new Unicode11Addon();
-    term.loadAddon(unicode11Addon);
-    term.unicode.activeVersion = '11';
-
+    
     // stack this terminal over the previous ones
     clicks_counter++;
     terminalDiv.style.zIndex = clicks_counter;
-
+    
     // Make the terminal draggable
     makeDraggable(terminalHeader, container);
-
+    
     // allow dragging into
     terminalDiv.addEventListener('dragover', (event) => {
         event.preventDefault();
@@ -245,7 +227,7 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
             // window.dragSourceT
             terminalDiv.setAttribute("parent", window.dragSourceT.id);
             window.dragSourceT.setAttribute("child", terminalDiv.id);
-
+            
             // Get the center coordinates of both elements
             const start = canvas.getCenterCoordinates(terminalDiv.getAttribute('parent'), true);
             const end = canvas.getCenterCoordinates(terminalDiv);
@@ -258,12 +240,28 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
             window.dragSourceB = null
         }
     });
+    
+    var term = new Terminal({
+        cursorBlink: true,
+        scrollback: 1000,
+        fontFamily: 'JetBrainsMonoNerdFont',
+        // rows: 10,
+        // cols: 50,
+        convertEol: true,
+        allowProposedApi: true, // Enable proposed API
+        theme: {
+            background: '#220917'
+        }
+    });
+    const unicode11Addon = new Unicode11Addon();
+    term.loadAddon(unicode11Addon);
+    term.unicode.activeVersion = '11';
 
     // here it comes ^-^
     term.open(terminalBody);
-
+    
     term.clear();
-
+    
     // refresh font size to refresh font face!! weird? I know.
     setTimeout(() => {
         if (existing_term_Div)
@@ -296,6 +294,7 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
 
     socket.on('output', (data) => {
         term.write(data);
+        fitAddon.fit();
         // windows.new_changes = true;
     });
 
@@ -318,6 +317,25 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
         terminalBody.style.width = "100%";
         terminalBody.style.height = 'calc(100% - 30px)';
         socket.emit('resize', { id, new_w, new_h });
+
+        const div = terminalDiv;
+        if (div.hasAttribute('parent')) {
+            // Get the center coordinates of both elements
+            const start = canvas.getCenterCoordinates(div.getAttribute('parent'), true);
+            const end = canvas.getCenterCoordinates(div, false);
+
+            // Draw a line between the centers of X and Y
+            canvas.drawLine(start, end, div.getAttribute('parent'), div.id);
+        }
+        if (div.hasAttribute('child')) {
+            // Get the center coordinates of both elements
+            const start = canvas.getCenterCoordinates(div.getAttribute('child'));
+            const end = canvas.getCenterCoordinates(div, true);
+
+            // Draw a line between the centers of X and Y
+            canvas.drawLine(end, start, div.id, div.getAttribute('child'));
+        }
+
         // windows.new_changes = true;
     }
 
@@ -326,25 +344,28 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
     term.onResize(({ cols, rows }) => {
         resizeTerminal();
         // Save
-        terminal_custom_data_saver(term, terminalDiv, lastCommand);
+        terminal_custom_data_saver(term, terminalDiv, "");
     });
 
     socket.on('clear', () => {
         term.clear();
+        term.reset();
     });
 
     socket.on('command', (data) => {
-        term.write(data.data);
+        lastCommand = "";
         // // Save
-        lastCommand = data.extractedCommand;
+        if (!['OK', 'ERR', '$1', 'null'].includes(data.extractedCommand.trim()))
+            lastCommand = data.extractedCommand.trim();
         // terminal_custom_data_saver(term, terminalDiv, lastCommand);
     });
 
     // Listen for exit event from the server and destroy terminal
     socket.on('exit', () => {
         term.dispose(); // Dispose the terminal instance
-        document.getElementById('termDiv' + id).remove(); // Remove the terminal div
+        activebody.removeChild(container); // Remove the terminal div
         document.getElementById("activeTerms").innerText = Number(document.getElementById("activeTerms").innerText) - 1;
+        socket.disconnect();
         // windows.new_changes = true;
     });
 
@@ -378,7 +399,7 @@ function createTerminal(id = -1, shell = "/usr/bin/zsh", existing_term_Div = nul
             term.options.fontSize -= 0.1;
         }
         // Save
-        terminal_custom_data_saver(term, terminalDiv, lastCommand);
+        terminal_custom_data_saver(term, terminalDiv, "");
         fitAddon.fit();
     }
 
@@ -713,7 +734,7 @@ window.onload = function () {
     if (terminalsDiv) { // automation mode activated ! 
 
         for (const terminalDiv of terminalsDiv) {
-            createTerminal(-1, "meow", terminalDiv);
+            prepareTerminalElement(-1, "meow", terminalDiv);
         }
     }
     canvas.refresh_lines();

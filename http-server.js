@@ -38,7 +38,7 @@ const io = new Server(server, {
 });
 
 app.use(cors(),
-express.static('public')
+    express.static('public')
 ); // Enable CORS for all routes
 
 
@@ -63,7 +63,7 @@ io.on('connection', (socket) => {
         console.log(shell);
         var command = null;
         // exit();
-        if(shell != fav_shell){
+        if (shell != fav_shell) {
             // it is a command not a shell
             command = shell;
             shell = fav_shell;
@@ -71,61 +71,93 @@ io.on('connection', (socket) => {
 
         // Create a new shell for this terminal instance
         shell = pty.spawn(shell, [], {
-            name: 'xterm-color',
+            name: 'xterm-256color',
             cols: 80,
             rows: 30,
             cwd: process.env.HOME,
-            env: process.env,
+            env: { ...process.env, TERM: 'xterm-256color' },
         });
 
 
-        // code 13: Enter
+        // code 10: Enter
         // some code to easily track last executed command
-        // shell.write("preexec(){echo XXX-'$*'-XXX}" + String.fromCharCode(13));
-        shell.write('rec() { echo -e XXX-"$*"-XXX; eval "$*" && echo "XXX-OK-XXX" || echo "XXX-ERR-XXX"; }' + String.fromCharCode(13));
-        shell.write("clear" + String.fromCharCode(13));
-        socket.emit("clear");
-        shell.write('# start your commands with rec to record them for automation' + String.fromCharCode(13));
-        if(command)
-            shell.write(command + String.fromCharCode(13));
+        // shell.write("preexec(){echo XXX-'$*'-XXX}" + String.fromCharCode(27, 13));
+
+        // shell.write('r() { echo -e XXX-"$*"-XXX; eval "$*" && echo "XXX-OK-XXX" || echo "XXX-ERR-XXX"; } \n');
+        // shell.write("clear" + String.fromCharCode(13));
+        // socket.emit("clear");
+        // shell.write('# start your commands with rec to record them for automation' + String.fromCharCode(13));
+        if (command)
+            shell.write(command + String.fromCharCode(10));
 
         // Handle data from the shell
         shell.on('data', (data) => {
-            const regex = /XXX-(.*?)\-XXX/;
-            const match = data.match(regex);
+            datalines = data.split('\n');
+            datalines.forEach((line) => {
+                line = line.replace(/\n/g, '\r\n');
+                // DEBUG
+                // let charCodes = [];
+                // for (let i = 0; i < line.length; i++) {
+                //     charCodes.push(line.charCodeAt(i));
+                // }
+                // console.log(line);
+                // console.log("Character codes: " + charCodes.join(', '));
+                // charCodes = [];
 
-            // Check if there is a match
-            if (match) {
-                const extractedCommand = match[1]; // Extract the text
 
-                // Remove the extracted text and the markers from the original string
-                data = data.replace(regex, '').trim(); // Remove the matched part and trim any extra spaces
-                console.log("command: "+extractedCommand);
-                if (extractedCommand == "cls" || extractedCommand == "clear") {
-                    socket.emit("clear");
-                }
-                else if (extractedCommand == "exit") {
-                    console.log('attempting to exit from client');
-                    socket.emit('exit');
-                }
-                else if (extractedCommand == "ERR"){
-                    socket.emit("ERR");
-                }
-                else if (extractedCommand == "OK"){
-                    socket.emit("OK");
-                }
-                else {
-                    socket.emit("command", { data, extractedCommand });
-                }
-            }
 
+                const regex = /XXX-(.*?)\-XXX/;
+                console.log("line : " + line);
+                const match = line.match(regex);
+
+                // Check if there is a match
+                if (match) {
+                    var extractedCommand = match[1].trim(); // Extract the text
+
+                    // Remove the extracted text and the markers from the original string
+                    // line = line.replace(regex, ''); // Remove the matched part and trim any extra spaces
+                    console.log("command: " + extractedCommand);
+                    if (extractedCommand == "cls" || extractedCommand == "clear") {
+                        socket.emit("clear");
+                        extractedCommand = "";
+                    }
+                    else if (extractedCommand == "done") {
+                        console.log('==> done');
+                        socket.emit('done');
+                        extractedCommand = "";
+                    }
+                    else if (extractedCommand == "exit") {
+                        console.log('==> ALERT');
+                        socket.emit('ALERT');
+                        extractedCommand = "";
+                    }
+                    else if (extractedCommand == "ERR") {
+                        socket.emit("ERR");
+                        console.log('==> ERR');
+                        extractedCommand = "";
+                    }
+                    else if (extractedCommand == "OK") {
+                        socket.emit("OK");
+                        console.log('==> OK');
+                        extractedCommand = "";
+                    }
+                    socket.emit("command", { extractedCommand });
+                }
+
+            });
             socket.emit('output', data);
+
+        });
+
+        shell.onExit(()=>{
+            socket.emit('exit');
         });
 
 
         // Handle input from the client
         socket.on('input', (inputData) => {
             const data = inputData;
+            console.log("web: " + data.charCodeAt(0));
             shell.write(data);
         });
 
