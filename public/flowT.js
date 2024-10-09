@@ -4,6 +4,8 @@ import { Unicode11Addon } from 'xterm-addon-unicode11';
 import { Terminal } from 'xterm';
 // windows.new_changes = false;
 
+var activeBody = document.body.children.activeBody;
+
 const terminal_is_done = new CustomEvent('parentisdone', {
     detail: { id: '0' }, // Additional data
 });
@@ -21,7 +23,7 @@ function terminal_custom_data_saver(term, termDiv, lastCommand) {
     lastCommand = lastCommand.trim();
     if (lastCommand != "$1" && lastCommand != "" && lastCommand != "null") {
         if (termDiv.hasAttribute('lastCommand'))
-            termDiv.setAttribute('lastCommand', termDiv.getAttribute('lastCommand') + "]__[" + lastCommand);
+            termDiv.setAttribute('lastCommand', termDiv.getAttribute('lastCommand') + "]_[" + lastCommand);
         else
             termDiv.setAttribute('lastCommand', lastCommand);
     }
@@ -32,7 +34,12 @@ function terminal_custom_data_saver(term, termDiv, lastCommand) {
 // data retrival
 function terminal_custom_data_retriver(termDiv) {
     const fontSize = termDiv.getAttribute('fontsize');
-    const lastCommand = termDiv.getAttribute('lastCommand')
+    if (termDiv.hasAttribute('lastCommand')) {
+        var lastCommand = termDiv.getAttribute('lastCommand')
+    }
+    else {
+        var lastCommand = "";
+    }
     return { fontSize, lastCommand }
 }
 
@@ -121,10 +128,225 @@ spawnButton.addEventListener('click', () => {
 // variable for stacking terminals!
 let clicks_counter = 0;
 
+function createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell = "/usr/bin/zsh", existing_term_Div) {
+    terminalBody.innerHTML = "";
+    var term = new Terminal({
+        cursorBlink: true,
+        scrollback: 1000,
+        fontFamily: 'JetBrainsMonoNerdFont',
+        // rows: 10,
+        // cols: 50,
+        convertEol: true,
+        allowProposedApi: true, // Enable proposed API
+        theme: {
+            background: '#220917'
+        }
+    });
+    const unicode11Addon = new Unicode11Addon();
+    term.loadAddon(unicode11Addon);
+    term.unicode.activeVersion = '11';
+
+    // here it comes ^-^
+    term.open(terminalBody);
+
+    term.clear();
+
+
+    // refresh font size to refresh font face!! weird? I know.
+    setTimeout(() => {
+        if (existing_term_Div)
+            term.options.fontSize = terminalDiv.getAttribute('fontsize');
+        else {
+            term.options.fontSize = 16;
+            // Save
+            terminal_custom_data_saver(term, terminalDiv, "");
+        }
+    }, 400);
+
+    // fit fit fit
+    let fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
+    fitAddon.fit();
+
+    // Store the terminal instance
+    const socket = io('http://127.0.0.1:3000', {
+        rejectUnauthorized: false,
+    });
+
+    // Handle input/output as needed
+    term.onData((data) => {
+        socket.emit('input', data);
+        // windows.new_changes = true;
+    });
+
+    socket.on('output', (data) => {
+        term.write(data);
+        fitAddon.fit();
+        // windows.new_changes = true;
+    });
+
+    // Create a new shell on the server when the terminal is created
+    if (!existing_term_Div) {
+        socket.emit('new-terminal', shell);
+    }
+    else {
+        // force resize if existing term!
+        resizeTerminal();
+        term.clear();
+        socket.emit('new-terminal', shell);
+    }
+
+    // Function to resize the terminal
+    function resizeTerminal() {
+        fitAddon.fit();
+        const new_w = term.cols;
+        const new_h = term.rows;
+        console.log("current size: ", id, new_w, new_h);
+        terminalBody.style.width = "100%";
+        terminalBody.style.height = 'calc(100% - 30px)';
+        socket.emit('resize', { id, new_w, new_h });
+
+        const div = terminalDiv;
+        if (div.hasAttribute('parent')) {
+            // Get the center coordinates of both elements
+            const start = canvas.getCenterCoordinates(div.getAttribute('parent'), true);
+            const end = canvas.getCenterCoordinates(div, false);
+
+            // Draw a line between the centers of X and Y
+            canvas.drawLine(start, end, div.getAttribute('parent'), div.id);
+        }
+        if (div.hasAttribute('child')) {
+            // Get the center coordinates of both elements
+            const start = canvas.getCenterCoordinates(div.getAttribute('child'));
+            const end = canvas.getCenterCoordinates(div, true);
+
+            // Draw a line between the centers of X and Y
+            canvas.drawLine(end, start, div.id, div.getAttribute('child'));
+        }
+
+        // windows.new_changes = true;
+    }
+
+    // manage resizing! nothing is easy
+    new ResizeObserver(resizeTerminal).observe(terminalDiv);
+    term.onResize(({ cols, rows }) => {
+        resizeTerminal();
+        // Save
+        terminal_custom_data_saver(term, terminalDiv, "");
+    });
+
+    socket.on('clear', () => {
+        term.clear();
+        term.reset();
+    });
+
+    var lastCommand;
+
+    socket.on('command', (data) => {
+        // lastCommand = "";
+        // // Save
+        if (!['OK', 'ERR', '$1', 'null'].includes(data.extractedCommand.trim()))
+            lastCommand = data.extractedCommand.trim();
+        // terminal_custom_data_saver(term, terminalDiv, lastCommand);
+    });
+
+    // Listen for exit event from the server and destroy terminal
+    socket.on('exit', () => {
+        term.dispose(); // Dispose the terminal instance
+        document.body.children.activebody.removeChild(terminalDiv.closest('.container')); // Remove the terminal div
+        document.getElementById("activeTerms").innerText = Number(document.getElementById("activeTerms").innerText) - 1;
+        socket.disconnect();
+        // windows.new_changes = true;
+    });
+
+    socket.on('OK', () => {
+        // Save
+        terminal_custom_data_saver(term, terminalDiv, lastCommand);
+        // term.write('rec ');
+    });
+
+    socket.on('ERR', () => {
+        term.write("#FlowT won't save this command!");
+        term.write(String.fromCharCode(13));
+        // term.write("rec ");
+    });
+
+    socket.on('ALERT', () => {
+        dispatchEvent(terminal_is_done, { id: id });
+    });
+
+
+    // Function to handle scroll event
+    function handleScroll(event, target) {
+        var div = target;
+        const scale = 0.02;
+        // div.style.transformOrigin = 'top left';
+        const rect = target.getBoundingClientRect();
+
+        // Calculate mouse position relative to the box
+        const mouseX = event.clientX - rect.left;
+        const mouseY = event.clientY - rect.top;
+
+        if (event.deltaY > 0) {
+            term.options.fontSize += 0.1;
+        } else {
+            term.options.fontSize -= 0.1;
+        }
+        // Save
+        terminal_custom_data_saver(term, terminalDiv, "");
+        fitAddon.fit();
+    }
+
+    // Add scroll event listener
+    terminalHeader.addEventListener('wheel', function (event) {
+        event.preventDefault(); // Prevent the default scroll behavior
+        handleScroll(event, terminalDiv);
+    });
+
+    // Function to prevent page scrolling when using the mouse wheel inside the terminal
+    terminalBody.addEventListener('wheel', (event) => {
+        const scrollableHeight = terminalBody.scrollHeight - terminalBody.clientHeight;
+        const scrollTop = terminalBody.scrollTop;
+
+        if ((event.deltaY < 0 && scrollTop <= 0) || (event.deltaY > 0 && scrollTop >= scrollableHeight)) {
+            event.preventDefault(); // Prevent default scrolling if scrollbar is at the top or bottom
+        }
+
+    });
+    // stacking!
+    terminalDiv.addEventListener('click', () => {
+        clicks_counter += 1;
+        terminalDiv.style.zIndex = clicks_counter;
+        // windows.new_changes = true;
+    });
+
+    terminalDiv.addEventListener('wheel', (event) => {
+        let currentScale = Number(document.querySelector("._terminal").style.scale);
+        if (event.ctrlKey) {
+            event.preventDefault();
+            // Prevent the page zooming behavior
+
+            // Detect zoom direction
+            if (event.deltaY > 0) {
+                // Zoom in
+                currentScale = Math.min(currentScale * 1.01, 3); // Limit max scale to 3x
+            } else {
+                // Zoom out
+                currentScale = Math.max(currentScale * 0.99, 1); // Limit min scale to 0.5x
+            }
+            // Apply scaling transformation
+            terminalDiv.style.scale = currentScale;
+            // windows.new_changes = true;
+        }
+    });
+
+    return { term, socket };
+}
+
 // make a new terminal ?? note, use shell full path please ^u^
 // if there's existing_term_div, ignores id
 function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing_term_Div = null) {
-    if (existing_term_Div == null) {
+    if (!existing_term_Div) {
         var terminalDiv = document.createElement('div');
         terminalDiv.className = '_terminal';
         // terminalDiv.style.left = Number(Number(window.scrollX) + Number(Math.random() * 600)) + "px"; // Random initial position
@@ -148,8 +370,9 @@ function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing_term_D
             terminalHeader.contentEditable = false;
         })
 
-        var new_orderbox = orderbox.create_orderbox();
+        var new_orderbox = orderbox.create_orderbox(id);
         terminalHeader.appendChild(new_orderbox);
+        terminalHeader.setAttribute('order', 0);
 
         var terminalBody = document.createElement('div');
         terminalBody.className = 'terminal-body';
@@ -198,18 +421,19 @@ function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing_term_D
         var container = terminalDiv.closest('.container');
 
         var terminalDiv = existing_term_Div;
-        var order = existing_term_Div.querySelector('orderbox');
+        var new_orderbox = terminalHeader.querySelector('#order' + id);
+        new_orderbox.selectedIndex = terminalHeader.getAttribute('order');
         var { fontSize, lastCommand } = terminal_custom_data_retriver(terminalDiv);
     }
 
-    
+
     // stack this terminal over the previous ones
     clicks_counter++;
     terminalDiv.style.zIndex = clicks_counter;
-    
+
     // Make the terminal draggable
     makeDraggable(terminalHeader, container);
-    
+
     // allow dragging into
     terminalDiv.addEventListener('dragover', (event) => {
         event.preventDefault();
@@ -227,7 +451,7 @@ function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing_term_D
             // window.dragSourceT
             terminalDiv.setAttribute("parent", window.dragSourceT.id);
             window.dragSourceT.setAttribute("child", terminalDiv.id);
-            
+
             // Get the center coordinates of both elements
             const start = canvas.getCenterCoordinates(terminalDiv.getAttribute('parent'), true);
             const end = canvas.getCenterCoordinates(terminalDiv);
@@ -240,223 +464,78 @@ function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing_term_D
             window.dragSourceB = null
         }
     });
-    
-    var term = new Terminal({
-        cursorBlink: true,
-        scrollback: 1000,
-        fontFamily: 'JetBrainsMonoNerdFont',
-        // rows: 10,
-        // cols: 50,
-        convertEol: true,
-        allowProposedApi: true, // Enable proposed API
-        theme: {
-            background: '#220917'
-        }
-    });
-    const unicode11Addon = new Unicode11Addon();
-    term.loadAddon(unicode11Addon);
-    term.unicode.activeVersion = '11';
 
-    // here it comes ^-^
-    term.open(terminalBody);
-    
-    term.clear();
-    
-    // refresh font size to refresh font face!! weird? I know.
-    setTimeout(() => {
-        if (existing_term_Div)
-            term.options.fontSize = fontSize;
+    // Add an event listener for the 'change' event
+    new_orderbox.addEventListener('change', function () {
+        // Get the selected option text
+        terminalHeader.setAttribute('order', new_orderbox.selectedIndex);
+    });
+
+    terminalDiv.setAttribute('lastCommand', 'echo hi]_[echo bye]_[nyancat');
+    terminalBody.innerHTML = '<br>' + terminalDiv.getAttribute("lastCommand").replaceAll("]_[", "<br>");
+
+    var term, socket;
+
+    function ct() {
+        var { term, socket } = createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell, existing_term_Div);
+        terminalDiv.removeEventListener('dblclick', ct);
+        setTimeout(() => {
+            autoexec(term, socket, terminalDiv, 0, 0, terminalDiv.getAttribute('lastCommand'));
+        }, 4000);
+    }
+
+    if (new_orderbox.selectedIndex == 0) { // Manual
+        if (existing_term_Div) {
+            terminalDiv.addEventListener('dblclick', ct);
+        }
         else {
-            term.options.fontSize = 16;
-            // Save
-            terminal_custom_data_saver(term, terminalDiv, "");
+            var { term, socket } = createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell, existing_term_Div);
+            setTimeout(() => {
+                autoexec(term, socket, terminalDiv, 0, 0, terminalDiv.getAttribute('lastCommand'));
+            }, 4000);
         }
-    }, 100);
-
-    // fit fit fit
-    let fitAddon = new FitAddon.FitAddon();
-    term.loadAddon(fitAddon);
-    fitAddon.fit();
-
-    // Store the terminal instance
-    const socket = io('http://127.0.0.1:3000', {
-        rejectUnauthorized: false,
-    });
-
-    if (!existing_term_Div)
-        var lastCommand = ""
-
-    // Handle input/output as needed
-    term.onData((data) => {
-        socket.emit('input', data);
-        // windows.new_changes = true;
-    });
-
-    socket.on('output', (data) => {
-        term.write(data);
-        fitAddon.fit();
-        // windows.new_changes = true;
-    });
-
-    // Create a new shell on the server when the terminal is created
-    if (!existing_term_Div)
-        socket.emit('new-terminal', shell);
-    else {
-        // force resize if existing term!
-        resizeTerminal();
-        term.clear();
-        socket.emit('new-terminal', lastCommand);
     }
-
-    // Function to resize the terminal
-    function resizeTerminal() {
-        fitAddon.fit();
-        const new_w = term.cols;
-        const new_h = term.rows;
-        console.log("current size: ", id, new_w, new_h);
-        terminalBody.style.width = "100%";
-        terminalBody.style.height = 'calc(100% - 30px)';
-        socket.emit('resize', { id, new_w, new_h });
-
-        const div = terminalDiv;
-        if (div.hasAttribute('parent')) {
-            // Get the center coordinates of both elements
-            const start = canvas.getCenterCoordinates(div.getAttribute('parent'), true);
-            const end = canvas.getCenterCoordinates(div, false);
-
-            // Draw a line between the centers of X and Y
-            canvas.drawLine(start, end, div.getAttribute('parent'), div.id);
-        }
-        if (div.hasAttribute('child')) {
-            // Get the center coordinates of both elements
-            const start = canvas.getCenterCoordinates(div.getAttribute('child'));
-            const end = canvas.getCenterCoordinates(div, true);
-
-            // Draw a line between the centers of X and Y
-            canvas.drawLine(end, start, div.id, div.getAttribute('child'));
-        }
-
-        // windows.new_changes = true;
-    }
-
-    // manage resizing! nothing is easy
-    new ResizeObserver(resizeTerminal).observe(terminalDiv);
-    term.onResize(({ cols, rows }) => {
-        resizeTerminal();
-        // Save
-        terminal_custom_data_saver(term, terminalDiv, "");
-    });
-
-    socket.on('clear', () => {
-        term.clear();
-        term.reset();
-    });
-
-    socket.on('command', (data) => {
-        lastCommand = "";
-        // // Save
-        if (!['OK', 'ERR', '$1', 'null'].includes(data.extractedCommand.trim()))
-            lastCommand = data.extractedCommand.trim();
-        // terminal_custom_data_saver(term, terminalDiv, lastCommand);
-    });
-
-    // Listen for exit event from the server and destroy terminal
-    socket.on('exit', () => {
-        term.dispose(); // Dispose the terminal instance
-        activebody.removeChild(container); // Remove the terminal div
-        document.getElementById("activeTerms").innerText = Number(document.getElementById("activeTerms").innerText) - 1;
-        socket.disconnect();
-        // windows.new_changes = true;
-    });
-
-    socket.on('OK', () => {
-        // Save
-        terminal_custom_data_saver(term, terminalDiv, lastCommand);
-        // term.write('rec ');
-    });
-
-    socket.on('ERR', () => {
-        term.write("#FlowT won't save this command!");
-        term.write(String.fromCharCode(13));
-        // term.write("rec ");
-    });
-
-
-    // Function to handle scroll event
-    function handleScroll(event, target) {
-        var div = target;
-        const scale = 0.02;
-        // div.style.transformOrigin = 'top left';
-        const rect = target.getBoundingClientRect();
-
-        // Calculate mouse position relative to the box
-        const mouseX = event.clientX - rect.left;
-        const mouseY = event.clientY - rect.top;
-
-        if (event.deltaY > 0) {
-            term.options.fontSize += 0.1;
-        } else {
-            term.options.fontSize -= 0.1;
-        }
-        // Save
-        terminal_custom_data_saver(term, terminalDiv, "");
-        fitAddon.fit();
-    }
-
-    // Add scroll event listener
-    terminalHeader.addEventListener('wheel', function () {
-        event.preventDefault(); // Prevent the default scroll behavior
-        handleScroll(event, terminalDiv);
-    });
-
-    // Function to prevent page scrolling when using the mouse wheel inside the terminal
-    terminalBody.addEventListener('wheel', (event) => {
-        const scrollableHeight = terminalBody.scrollHeight - terminalBody.clientHeight;
-        const scrollTop = terminalBody.scrollTop;
-
-        if ((event.deltaY < 0 && scrollTop <= 0) || (event.deltaY > 0 && scrollTop >= scrollableHeight)) {
-            event.preventDefault(); // Prevent default scrolling if scrollbar is at the top or bottom
-        }
-
-    });
-
-    const body = document.body;
-    // Disable body scrolling when mouse is inside the terminal
-    terminalDiv.addEventListener('click', () => {
-        clicks_counter += 1;
-        terminalDiv.style.zIndex = clicks_counter;
-        // windows.new_changes = true;
-    });
-
-    // terminalDiv.addEventListener('mouseover', () => {
-    //     body.classList.add('no-scroll');
-    // });
-
-    // Enable body scrolling again when mouse leaves the terminal
-    // terminalDiv.addEventListener('mouseleave', () => {
-    //     body.classList.remove('no-scroll');
-    // });
-
-    terminalDiv.addEventListener('wheel', (event) => {
-        let currentScale = Number(document.querySelector("._terminal").style.scale);
-        if (event.ctrlKey) {
-            event.preventDefault();
-            // Prevent the page zooming behavior
-
-            // Detect zoom direction
-            if (event.deltaY > 0) {
-                // Zoom in
-                currentScale = Math.min(currentScale * 1.01, 3); // Limit max scale to 3x
-            } else {
-                // Zoom out
-                currentScale = Math.max(currentScale * 0.99, 1); // Limit min scale to 0.5x
+    else if (new_orderbox.selectedIndex == 2) { // on previous success
+        terminalDiv.addEventListener(terminal_is_done, (event) => {
+            if (event.detail.id == terminalDiv.getAttribute('parent')) {
+                var { term, socket } = createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell, existing_term_Div);
+                setTimeout(() => {
+                    autoexec(term, socket, terminalDiv, 2, 0, terminalDiv.getAttribute('lastCommand'));
+                }, 4000);
             }
-            // Apply scaling transformation
-            terminalDiv.style.scale = currentScale;
-            // windows.new_changes = true;
-        }
-    });
+        });
+    }
+    else if (new_orderbox.selectedIndex == 1) { // startup
+        var { term, socket } = createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell, existing_term_Div);
+        setTimeout(() => {
+            autoexec(term, socket, terminalDiv, 1, 0, terminalDiv.getAttribute('lastCommand'));
+        }, 4000);
+    }
+    // document.body.appendChild(document.body.createElement('div'));
+}
 
+function autoexec(term, sock, terminalDiv, type, turn, original_commands) {
+    if (original_commands.split(']_[').length <= turn) {
+        sock.off('OK', run);
+        terminalDiv.setAttribute('lastCommand', original_commands);
+        dispatchEvent(terminal_is_done, { id: id });
+        return;
+    }
+
+    let command = original_commands.split(']_[')[turn];
+    if (type >= 1) {
+        // term.write('r ' + command + '\n');
+        sock.emit('input', 'r ' + command + '\n');
+    }
+    else {
+        // term.write('r ' + command);
+        sock.emit('input', 'r ' + command);
+    }
+    function run() {
+        sock.off('OK', run);
+        setTimeout(() => { autoexec(term, sock, terminalDiv, type, turn + 1, original_commands); }, 4000);
+    }
+    sock.on('OK', run);
 }
 
 
@@ -734,7 +813,7 @@ window.onload = function () {
     if (terminalsDiv) { // automation mode activated ! 
 
         for (const terminalDiv of terminalsDiv) {
-            prepareTerminalElement(-1, "meow", terminalDiv);
+            prepareTerminalElement(terminalDiv.getAttribute("termid"), "/usr/bin/zsh", terminalDiv);
         }
     }
     canvas.refresh_lines();

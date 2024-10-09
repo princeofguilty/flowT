@@ -92,6 +92,7 @@ io.on('connection', (socket) => {
 
         // Handle data from the shell
         shell.on('data', (data) => {
+            var extractedCommand = ""; // extract command!
             datalines = data.split('\n');
             datalines.forEach((line) => {
                 line = line.replace(/\n/g, '\r\n');
@@ -112,7 +113,7 @@ io.on('connection', (socket) => {
 
                 // Check if there is a match
                 if (match) {
-                    var extractedCommand = match[1].trim(); // Extract the text
+                    extractedCommand = match[1].trim(); // Extract the text
 
                     // Remove the extracted text and the markers from the original string
                     // line = line.replace(regex, ''); // Remove the matched part and trim any extra spaces
@@ -121,11 +122,11 @@ io.on('connection', (socket) => {
                         socket.emit("clear");
                         extractedCommand = "";
                     }
-                    else if (extractedCommand == "done") {
-                        console.log('==> done');
-                        socket.emit('done');
-                        extractedCommand = "";
-                    }
+                    // else if (extractedCommand == "done") {
+                    //     console.log('==> done');
+                    //     socket.emit('done');
+                    //     extractedCommand = "";
+                    // }
                     else if (extractedCommand == "exit") {
                         console.log('==> ALERT');
                         socket.emit('ALERT');
@@ -146,6 +147,11 @@ io.on('connection', (socket) => {
 
             });
             socket.emit('output', data);
+            if (extractedCommand == "exit") {
+                console.log('==> exit');
+                socket.emit('exit');
+                extractedCommand = "";
+            }
 
         });
 
