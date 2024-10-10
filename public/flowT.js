@@ -475,8 +475,10 @@ function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing_term_D
         terminalHeader.setAttribute('order', new_orderbox.selectedIndex);
     });
 
-    terminalDiv.setAttribute('lastCommand', 'echo hi]_[echo bye]_[nyancat');
-    terminalBody.innerHTML = '<br>' + terminalDiv.getAttribute("lastCommand").replaceAll("]_[", "<br>");
+    // only for testing
+    // terminalDiv.setAttribute('lastCommand', 'echo hi]_[echo bye]_[nyancat');
+    terminalBody.innerHTML = '<br>* ' + terminalDiv.getAttribute("lastCommand").replaceAll("]_[", "<br>");
+    terminalBody.style.fontSize = "22px";
 
     var term, socket;
 
@@ -572,7 +574,9 @@ function createBox(x, y, innerHTML, outerHTML = null) {
         // container.style.gap = "5px";
         container.style.justifyContent = "flex-start";
         container.insertAdjacentHTML('beforeend', outerHTML);
-        // container.children[1].style.border = "2px solid #ccc";
+        container.children[1].style.fontSize = "40px";
+        container.children[1].style.color = "white";
+        // container.children[1].style.border = "2px solid #ffffff";
         container.contentEditable = false;
 
         // container.children[1].style.userSelect = "none";
@@ -585,10 +589,14 @@ function createBox(x, y, innerHTML, outerHTML = null) {
         // Set the innerHTML to the provided HTML content
         var box = document.createElement('div');
         box.innerHTML = innerHTML;
+
+        // Make the box editable
+        box.contentEditable = true;
+
         // Append the box to the body
         activebody.appendChild(box);
         box.classList.add('box');
-        box.contentEditable = true;
+
     }
 
     box.style.left = `${x}px`;
@@ -600,6 +608,15 @@ function createBox(x, y, innerHTML, outerHTML = null) {
         box.style.border = "1px solid #ccc";
     });
 
+    // Add event listener for keydown events
+    box.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            document.execCommand('insertHTML', false, '<br>');
+            event.preventDefault();
+        }
+    });
+
+
     window.box_position = null;
     box.addEventListener('contextmenu', function (event) {
         event.preventDefault();
@@ -610,7 +627,7 @@ function createBox(x, y, innerHTML, outerHTML = null) {
             pointer = pointer.children[1];
         }
         var holder = pointer.outerHTML;
-        holder = holder.replace(/(?:\s*contenteditable="(?:true|false)"\s*|\s*style="[^"]*"\s*)/g, '');
+        holder = holder.replace(/(?:contenteditable="(?:true|false)"\s*|\s*style="[^"]*"\s*)/g, '');
         box.innerText = holder;
     });
 

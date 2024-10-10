@@ -43,6 +43,10 @@
             margin: 10px 10px;
         }
 
+        div {
+            text-align: left;
+        }
+
         .fixed-div {
             position: fixed;
             /* Keeps the div fixed on the screen */
@@ -184,6 +188,7 @@
             /* Unfilled circle with red border */
             border-radius: 50%;
             /* Prevent interaction */
+            animation: expand-circle 5s linear forwards;
             animation: expand-circle 5s linear forwards;
             transform: translate(-50%, -50%);
             /* To ensure the circle is centered */
