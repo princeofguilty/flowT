@@ -459,6 +459,7 @@ function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing_term_D
 }
 
 function autoexec(term, sock, terminalDiv, type, turn, original_commands) {
+    if (! original_commands) return;
     if (original_commands.split(']_[').length <= turn) {
         sock.off('OK', run);
         terminalDiv.setAttribute('lastCommand', original_commands);

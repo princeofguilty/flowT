@@ -72,7 +72,10 @@ export function createBox(x, y, innerHTML, outerHTML = null, location = "center"
 
 
     window.box_position = null;
-    if (box.children[1].tagName != "IMG") {
+    if (box.children.length > 1 && box.children[1].tagName == "IMG" && box.children[1].src.startsWith('data:image/')) {
+        //skip
+    }
+    else{
         box.addEventListener('contextmenu', function (event) {
             event.preventDefault();
             box.contentEditable = true;

@@ -116,7 +116,7 @@ io.on('connection', (socket) => {
                     extractedCommand = match[1].trim(); // Extract the text
 
                     // Remove the extracted text and the markers from the original string
-                    line = line.replace(regex, ''); // Remove the matched part and trim any extra spaces
+                    data = line.replace(regex, ''); // Remove the matched part and trim any extra spaces
                     console.log("command: " + extractedCommand);
                     if (extractedCommand == "cls" || extractedCommand == "clear") {
                         socket.emit("clear");

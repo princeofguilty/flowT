@@ -15,4 +15,5 @@ document.getElementById("project-name").addEventListener('click', function(event
 document.getElementById("project-name").addEventListener('focusout', function(event){
     event.currentTarget.style.backgroundColor = "transparent";
     event.currentTarget.contentEditable = false;
+    document.title = 'FlowT: ' + document.getElementById("project-name").textContent.trim();
 })
