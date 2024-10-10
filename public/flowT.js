@@ -61,7 +61,7 @@ spawnButton.addEventListener('click', () => {
 // variable for stacking terminals!
 let clicks_counter = 0;
 
-function createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell = "/usr/bin/zsh", existing_term_Div) {
+function createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell = "/usr/bin/zsh", existing_term_Div, history = false) {
     terminalBody.innerHTML = "";
     var term = new Terminal({
         cursorBlink: true,
@@ -115,12 +115,18 @@ function createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell = "
     socket.on('output', (data) => {
         term.write(data);
         fitAddon.fit();
+        terminalDiv.setAttribute('history', terminalDiv.getAttribute('history')+data);
         // windows.new_changes = true;
     });
 
     // Create a new shell on the server when the terminal is created
     if (!existing_term_Div) {
         socket.emit('new-terminal', shell);
+    }
+    else if (history){
+        // no terminals
+        resizeTerminal();
+        term.clear();
     }
     else {
         // force resize if existing term!
@@ -288,6 +294,7 @@ function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing_term_D
         // terminalDiv.style.top = Number(Number(window.scrollY) + Number(Math.random() * 400)) + "px"; // Random initial position
         terminalDiv.id = "termDiv" + id;
         terminalDiv.setAttribute('termID', id);
+        terminalDiv.setAttribute('history', '');
 
 
         var terminalHeader = document.createElement('div');
@@ -454,6 +461,11 @@ function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing_term_D
         setTimeout(() => {
             autoexec(term, socket, terminalDiv, 1, 0, terminalDiv.getAttribute('lastCommand'));
         }, 2000);
+    }
+    else if (new_orderbox.selectedIndex == 3){ // History
+        var { term, socket } = createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell, existing_term_Div, true);
+        term.write(terminalDiv.getAttribute('history'));
+        term.write('# this is read only terminal!!');
     }
     // document.body.appendChild(document.body.createElement('div'));
 }

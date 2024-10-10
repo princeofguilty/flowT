@@ -163,7 +163,7 @@ io.on('connection', (socket) => {
         // Handle input from the client
         socket.on('input', (inputData) => {
             const data = inputData;
-            console.log("web: " + data.charCodeAt(0));
+            // console.log("web: " + data.charCodeAt(0));
             shell.write(data);
         });
 

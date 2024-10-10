@@ -1,4 +1,4 @@
-const order_options = ['Manual', 'Startup', 'On Previous Success']
+const order_options = ['Manual', 'Startup', 'On Previous Success', 'History']
 
 function create_orderbox(id) {
     const options = document.createElement('select');
