@@ -540,7 +540,7 @@ function autoexec(term, sock, terminalDiv, type, turn, original_commands) {
 
 
 ////////////////
-//////////////// box section
+//////////////// box section xxxxxxxxxxxxxxxxxxxxxxxxxx
 ////////////////
 function unescapeHTML(html) {
     // Create a temporary DOM element
