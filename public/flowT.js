@@ -4,11 +4,7 @@ import { Unicode11Addon } from 'xterm-addon-unicode11';
 import { Terminal } from 'xterm';
 // windows.new_changes = false;
 
-var activeBody = document.body.children.activeBody;
-
-const terminal_is_done = new CustomEvent('parentisdone', {
-    detail: { id: '0' }, // Additional data
-});
+const terminal_is_done = new CustomEvent('parentisdone');
 
 window.addEventListener('load', function () {
     window.scrollTo(document.body.clientWidth * 1 / 3, document.body.clientHeight * 1 / 3);
@@ -88,12 +84,14 @@ function makeDraggable(element, target) {
                 canvas.drawLine(start, end, div.getAttribute('parent'), div.id);
             }
             if (div.hasAttribute('child')) {
-                // Get the center coordinates of both elements
-                const start = canvas.getCenterCoordinates(div.getAttribute('child'));
-                const end = canvas.getCenterCoordinates(div, true);
+                div.getAttribute('child').split(']_[').forEach(child => {
+                    // Get the center coordinates of both elements
+                    const start = canvas.getCenterCoordinates(child);
+                    const end = canvas.getCenterCoordinates(div, true);
 
-                // Draw a line between the centers of X and Y
-                canvas.drawLine(end, start, div.id, div.getAttribute('child'));
+                    // Draw a line between the centers of X and Y
+                    canvas.drawLine(end, start, div.id, child);
+                });
             }
         }
 
@@ -216,12 +214,14 @@ function createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell = "
             canvas.drawLine(start, end, div.getAttribute('parent'), div.id);
         }
         if (div.hasAttribute('child')) {
-            // Get the center coordinates of both elements
-            const start = canvas.getCenterCoordinates(div.getAttribute('child'));
-            const end = canvas.getCenterCoordinates(div, true);
+            div.getAttribute('child').split(']_[').forEach(child => {
+                // Get the center coordinates of both elements
+                const start = canvas.getCenterCoordinates(child);
+                const end = canvas.getCenterCoordinates(div, true);
 
-            // Draw a line between the centers of X and Y
-            canvas.drawLine(end, start, div.id, div.getAttribute('child'));
+                // Draw a line between the centers of X and Y
+                canvas.drawLine(end, start, div.id, child);
+            });
         }
 
         // windows.new_changes = true;
@@ -272,7 +272,7 @@ function createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell = "
     });
 
     socket.on('ALERT', () => {
-        dispatchEvent(terminal_is_done, { id: id });
+        terminalDiv.dispatchEvent(terminal_is_done);
     });
 
 
@@ -450,7 +450,11 @@ function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing_term_D
             // terminalDiv is parent
             // window.dragSourceT
             terminalDiv.setAttribute("parent", window.dragSourceT.id);
-            window.dragSourceT.setAttribute("child", terminalDiv.id);
+            if (window.dragSourceT.hasAttribute('child')) {
+                window.dragSourceT.setAttribute('child', window.dragSourceT.getAttribute('child') + ']_[' + terminalDiv.id);
+            } else {
+                window.dragSourceT.setAttribute('child', terminalDiv.id);
+            }
 
             // Get the center coordinates of both elements
             const start = canvas.getCenterCoordinates(terminalDiv.getAttribute('parent'), true);
@@ -496,13 +500,12 @@ function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing_term_D
         }
     }
     else if (new_orderbox.selectedIndex == 2) { // on previous success
-        terminalDiv.addEventListener(terminal_is_done, (event) => {
-            if (event.detail.id == terminalDiv.getAttribute('parent')) {
-                var { term, socket } = createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell, existing_term_Div);
-                setTimeout(() => {
-                    autoexec(term, socket, terminalDiv, 2, 0, terminalDiv.getAttribute('lastCommand'));
-                }, 4000);
-            }
+        // Add the event listener
+        document.getElementById(terminalDiv.getAttribute('parent')).addEventListener('parentisdone', (event) => {
+            var { term, socket } = createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell, existing_term_Div);
+            setTimeout(() => {
+                autoexec(term, socket, terminalDiv, 2, 0, terminalDiv.getAttribute('lastCommand'));
+            }, 4000);
         });
     }
     else if (new_orderbox.selectedIndex == 1) { // startup
@@ -518,7 +521,7 @@ function autoexec(term, sock, terminalDiv, type, turn, original_commands) {
     if (original_commands.split(']_[').length <= turn) {
         sock.off('OK', run);
         terminalDiv.setAttribute('lastCommand', original_commands);
-        dispatchEvent(terminal_is_done, { id: id });
+        terminalDiv.dispatchEvent(terminal_is_done);  // Dispatch the event for the terminalDiv
         return;
     }
 
@@ -573,7 +576,7 @@ function createBox(x, y, innerHTML, outerHTML = null) {
         container.contentEditable = false;
 
         // container.children[1].style.userSelect = "none";
-        activeBody.append(container);
+        activebody.appendChild(container);
         var box = container;
         x += window.scrollX;
         y += window.scrollY;

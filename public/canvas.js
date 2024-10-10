@@ -109,15 +109,26 @@ function drawLine(start, end, parent_id, child_id) {
 
 function refresh_lines() {
     document.querySelectorAll('._terminal').forEach(t => {
-        if (t.hasAttribute('child')) {
-            // Get the center coordinates of both elements
-            const start = getCenterCoordinates(t, true);
-            const child = document.getElementById(t.getAttribute('child'));
-            const end = getCenterCoordinates(child);
+        // if (t.hasAttribute('child')) {
+        //     // Get the center coordinates of both elements
+        //     const start = getCenterCoordinates(t, true);
+        //     const child = document.getElementById(t.getAttribute('child'));
+        //     const end = getCenterCoordinates(child);
 
-            // Draw a line between the centers of X and Y
-            drawLine(start, end, t.id, child.id);
-            // add_lineBall_to(t.closest('.container'));
+        //     // Draw a line between the centers of X and Y
+        //     drawLine(start, end, t.id, child.id);
+        //     // add_lineBall_to(t.closest('.container'));
+        // }
+
+        if (t.hasAttribute('child')) {
+            t.getAttribute('child').split(']_[').forEach(child => {
+                // Get the center coordinates of both elements
+                const start = getCenterCoordinates(child);
+                const end = getCenterCoordinates(t, true);
+
+                // Draw a line between the centers of X and Y
+                drawLine(end, start, t.id, child);
+            });
         }
     });
 }

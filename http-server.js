@@ -108,7 +108,7 @@ io.on('connection', (socket) => {
 
 
                 const regex = /XXX-(.*?)\-XXX/;
-                console.log("line : " + line);
+                // console.log("line : " + line);
                 const match = line.match(regex);
 
                 // Check if there is a match
@@ -116,7 +116,7 @@ io.on('connection', (socket) => {
                     extractedCommand = match[1].trim(); // Extract the text
 
                     // Remove the extracted text and the markers from the original string
-                    // line = line.replace(regex, ''); // Remove the matched part and trim any extra spaces
+                    line = line.replace(regex, ''); // Remove the matched part and trim any extra spaces
                     console.log("command: " + extractedCommand);
                     if (extractedCommand == "cls" || extractedCommand == "clear") {
                         socket.emit("clear");
