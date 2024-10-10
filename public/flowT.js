@@ -2,6 +2,8 @@ import canvas from './canvas.js'
 import orderbox from './order.js';
 import { Unicode11Addon } from 'xterm-addon-unicode11';
 import { Terminal } from 'xterm';
+import { createBox, makeDraggable } from './box.js';
+import { handlePasteImages } from './imagePasteHandler.js'; // Adjust the path as necessary
 // windows.new_changes = false;
 
 const terminal_is_done = new CustomEvent('parentisdone');
@@ -9,6 +11,7 @@ const terminal_is_done = new CustomEvent('parentisdone');
 window.addEventListener('load', function () {
     window.scrollTo(document.body.clientWidth * 1 / 3, document.body.clientHeight * 1 / 3);
 });
+
 
 var activebody = document.getElementById("activebody");
 
@@ -37,74 +40,6 @@ function terminal_custom_data_retriver(termDiv) {
         var lastCommand = "";
     }
     return { fontSize, lastCommand }
-}
-
-// make something draggable ?
-// what about element & target ??
-// for examle, you can drag a terminal from terminal header
-// but not from terminal body, so,
-// elements is header, when you drag the header, it 
-// moves the whole terminal.
-// to drag something normally, make element and target
-// just the same
-function makeDraggable(element, target) {
-    let isDragging = false;
-    let offsetX, offsetY;
-
-    element.addEventListener('pointerdown', (event) => {
-        isDragging = true;
-        offsetX = event.clientX - element.getBoundingClientRect().left;
-        offsetY = event.clientY - element.getBoundingClientRect().top;
-
-        // Set capture to track pointer events
-        element.setPointerCapture(event.pointerId);
-    });
-
-    element.addEventListener('pointermove', (event) => {
-        if (!isDragging || !event.target) return;
-
-        // windows.new_changes = true;
-
-        // Calculate new position
-        const newX = event.clientX - offsetX + window.scrollX + (target.className == "pearl") * (- target.getBoundingClientRect().width / 2);
-        const newY = event.clientY - offsetY + window.scrollY + (target.className == "pearl") * (- target.getBoundingClientRect().height / 2);
-
-        // Update element position
-        target.style.left = `${newX}px`;
-        target.style.top = `${newY}px`;
-
-        if (target.className == "container" && target.children[0].className == "_terminal") {
-            const div = target.children[0]
-            if (div.hasAttribute('parent')) {
-                // Get the center coordinates of both elements
-                const start = canvas.getCenterCoordinates(div.getAttribute('parent'), true);
-                const end = canvas.getCenterCoordinates(div, false);
-
-                // Draw a line between the centers of X and Y
-                canvas.drawLine(start, end, div.getAttribute('parent'), div.id);
-            }
-            if (div.hasAttribute('child')) {
-                div.getAttribute('child').split(']_[').forEach(child => {
-                    // Get the center coordinates of both elements
-                    const start = canvas.getCenterCoordinates(child);
-                    const end = canvas.getCenterCoordinates(div, true);
-
-                    // Draw a line between the centers of X and Y
-                    canvas.drawLine(end, start, div.id, child);
-                });
-            }
-        }
-
-    });
-
-    element.addEventListener('pointerup', () => {
-        isDragging = false;
-    });
-
-    element.addEventListener('pointercancel', () => {
-        isDragging = false;
-    });
-
 }
 
 // SPAWN A TERMINAL!
@@ -477,7 +412,9 @@ function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing_term_D
 
     // only for testing
     // terminalDiv.setAttribute('lastCommand', 'echo hi]_[echo bye]_[nyancat');
-    terminalBody.innerHTML = '<br>* ' + terminalDiv.getAttribute("lastCommand").replaceAll("]_[", "<br>");
+    if (terminalDiv.hasAttribute("lastCommand")) {
+        terminalBody.innerHTML = '<br>* ' + terminalDiv.getAttribute("lastCommand").replaceAll("]_[", '<br>* ');
+    }
     terminalBody.style.fontSize = "22px";
 
     var term, socket;
@@ -487,7 +424,7 @@ function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing_term_D
         terminalDiv.removeEventListener('dblclick', ct);
         setTimeout(() => {
             autoexec(term, socket, terminalDiv, 0, 0, terminalDiv.getAttribute('lastCommand'));
-        }, 4000);
+        }, 2000);
     }
 
     if (new_orderbox.selectedIndex == 0) { // Manual
@@ -496,9 +433,11 @@ function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing_term_D
         }
         else {
             var { term, socket } = createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell, existing_term_Div);
-            setTimeout(() => {
-                autoexec(term, socket, terminalDiv, 0, 0, terminalDiv.getAttribute('lastCommand'));
-            }, 4000);
+            if (existing_term_Div) {
+                setTimeout(() => {
+                    autoexec(term, socket, terminalDiv, 0, 0, terminalDiv.getAttribute('lastCommand'));
+                }, 2000);
+            }
         }
     }
     else if (new_orderbox.selectedIndex == 2) { // on previous success
@@ -507,14 +446,14 @@ function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing_term_D
             var { term, socket } = createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell, existing_term_Div);
             setTimeout(() => {
                 autoexec(term, socket, terminalDiv, 2, 0, terminalDiv.getAttribute('lastCommand'));
-            }, 4000);
+            }, 2000);
         });
     }
     else if (new_orderbox.selectedIndex == 1) { // startup
         var { term, socket } = createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell, existing_term_Div);
         setTimeout(() => {
             autoexec(term, socket, terminalDiv, 1, 0, terminalDiv.getAttribute('lastCommand'));
-        }, 4000);
+        }, 2000);
     }
     // document.body.appendChild(document.body.createElement('div'));
 }
@@ -538,15 +477,16 @@ function autoexec(term, sock, terminalDiv, type, turn, original_commands) {
     }
     function run() {
         sock.off('OK', run);
-        setTimeout(() => { autoexec(term, sock, terminalDiv, type, turn + 1, original_commands); }, 4000);
+        setTimeout(() => { autoexec(term, sock, terminalDiv, type, turn + 1, original_commands); }, 2000);
     }
     sock.on('OK', run);
 }
 
 
-////////////////
-//////////////// box section xxxxxxxxxxxxxxxxxxxxxxxxxx
-////////////////
+////////////////             /////////////////
+//////////////// box section /////////////////
+////////////////             /////////////////
+
 function unescapeHTML(html) {
     // Create a temporary DOM element
     const tempDiv = document.createElement('div');
@@ -556,101 +496,6 @@ function unescapeHTML(html) {
 
     // The browser will automatically decode the HTML
     return tempDiv.textContent || tempDiv.innerText;
-}
-
-// Function to create and position a box
-function createBox(x, y, innerHTML, outerHTML = null) {
-    if (outerHTML) {
-        // const tag = outerHTML.match(/<(\w+)\s/)[1];
-        const container = document.createElement('div');
-        container.className = "container";
-        const tags = outerHTML.match(/<\s*[a-zA-Z][a-zA-Z0-9\-]*\s*[^>]*\/?>/g);
-        //
-
-        // document.body.children.activebody.insertAdjacentHTML('beforeend', outerHTML);
-        var ball = canvas.generate_ball();
-        container.appendChild(ball);
-        container.style.flexDirection = "column";
-        // container.style.gap = "5px";
-        container.style.justifyContent = "flex-start";
-        container.insertAdjacentHTML('beforeend', outerHTML);
-        container.children[1].style.fontSize = "40px";
-        container.children[1].style.color = "white";
-        // container.children[1].style.border = "2px solid #ffffff";
-        container.contentEditable = false;
-
-        // container.children[1].style.userSelect = "none";
-        activebody.appendChild(container);
-        var box = container;
-        x += window.scrollX;
-        y += window.scrollY;
-    }
-    else {
-        // Set the innerHTML to the provided HTML content
-        var box = document.createElement('div');
-        box.innerHTML = innerHTML;
-
-        // Make the box editable
-        box.contentEditable = true;
-
-        // Append the box to the body
-        activebody.appendChild(box);
-        box.classList.add('box');
-
-    }
-
-    box.style.left = `${x}px`;
-    box.style.top = `${y}px`;
-
-    box.addEventListener('dblclick', function (event) {
-        event.preventDefault();
-        box.contentEditable = true;
-        box.style.border = "1px solid #ccc";
-    });
-
-    // Add event listener for keydown events
-    box.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-            document.execCommand('insertHTML', false, '<br>');
-            event.preventDefault();
-        }
-    });
-
-
-    window.box_position = null;
-    box.addEventListener('contextmenu', function (event) {
-        event.preventDefault();
-        box.contentEditable = true;
-        window.box_position = box.getBoundingClientRect();
-        let pointer = box;
-        while (pointer.children.length > 1 && pointer.className == "container") {
-            pointer = pointer.children[1];
-        }
-        var holder = pointer.outerHTML;
-        holder = holder.replace(/(?:contenteditable="(?:true|false)"\s*|\s*style="[^"]*"\s*)/g, '');
-        box.innerText = holder;
-    });
-
-    box.addEventListener('focusout', function (event) {
-        if (window.box_position == null)
-            return;
-        window.box_position = null;
-        const new_code = unescapeHTML(box.innerHTML);
-        box.contentEditable = false;
-
-        createBox(box.getBoundingClientRect().left, box.getBoundingClientRect().top, "", new_code);
-        document.body.children.activebody.removeChild(box);
-        box.style.border = "none";
-    });
-
-    // make the box draggable :)
-    if (!outerHTML) {
-        makeDraggable(box, box);
-    } else {
-        makeDraggable(ball, box);
-    }
-
-    return box;
 }
 
 // Add a double-click event listener to the body to 

@@ -39,6 +39,8 @@ function generate_ball() {
     ball.style.border = "none";
     ball.style.zIndex = "-1";
     ball.contentEditable = false;
+    ball.border = "none";
+    ball.addEventListener('dblclick', (event)=>{event.preventDefault();});
     return ball;
 }
 
