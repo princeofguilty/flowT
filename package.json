@@ -10,7 +10,8 @@
     "node-pty": "^1.0.0",
     "socket.io": "^4.8.0",
     "webpack": "^5.95.0",
-    "xterm": "^5.3.0"
+    "xterm": "^5.3.0",
+    "xterm-addon-unicode11": "^0.6.0"
   },
   "name": "flowt",
   "version": "1.0.0",
