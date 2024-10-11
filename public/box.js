@@ -26,9 +26,11 @@ export function createBox(x, y, innerHTML, outerHTML = null, location = "center"
         container.style.flexDirection = "column";
         // container.style.gap = "5px";
         container.style.justifyContent = "flex-start";
+        container.style.alignItems = "baseline";
         container.insertAdjacentHTML('beforeend', outerHTML);
-        container.children[1].style.fontSize = "40px";
+        container.children[1].style.fontSize = "28px";
         container.children[1].style.color = "white";
+        container.children[1].style.zIndex = -1999;
         // container.children[1].style.border = "2px solid #ffffff";
         container.contentEditable = false;
 
