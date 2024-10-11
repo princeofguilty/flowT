@@ -10,6 +10,7 @@ function create_orderbox(id) {
         new_option.text = optionText;
         options.add(new_option);
     });
+    options.selectedIndex = 3;
 
     return options;
 }

@@ -6,11 +6,11 @@
     "cors": "^2.8.5",
     "express": "^4.21.0",
     "interactjs": "^1.10.27",
+    "marked": "^14.1.2",
     "node-pty": "^1.0.0",
     "socket.io": "^4.8.0",
     "webpack": "^5.95.0",
-    "xterm": "^5.3.0",
-    "xterm-addon-unicode11": "^0.6.0"
+    "xterm": "^5.3.0"
   },
   "name": "flowt",
   "version": "1.0.0",
@@ -18,7 +18,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "author": "Ahmed Samir",
   "license": "ISC",
   "description": "",
   "devDependencies": {

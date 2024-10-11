@@ -4,6 +4,7 @@ import { Unicode11Addon } from 'xterm-addon-unicode11';
 import { Terminal } from 'xterm';
 import { createBox, makeDraggable } from './box.js';
 import { handlePasteImages } from './imagePasteHandler.js'; // Adjust the path as necessary
+import { marked } from 'marked';
 // windows.new_changes = false;
 
 const terminal_is_done = new CustomEvent('parentisdone');
@@ -179,6 +180,7 @@ function createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell = "
     socket.on('clear', () => {
         term.clear();
         term.reset();
+        terminalDiv.setAttribute('history', "");
     });
 
     var lastCommand;
@@ -465,7 +467,7 @@ function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing_term_D
     else if (new_orderbox.selectedIndex == 3){ // History
         var { term, socket } = createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell, existing_term_Div, true);
         term.write(terminalDiv.getAttribute('history'));
-        term.write('# this is read only terminal!!');
+        // term.write('# this is read only terminal!!');
     }
     // document.body.appendChild(document.body.createElement('div'));
 }
@@ -699,14 +701,22 @@ window.onload = function () {
 
 
 window.addEventListener('beforeunload', function (event) {
-    // // event.preventDefault();
+    event.preventDefault();
 
-    // // Set a confirmation message (this may not be displayed in some browsers)
-    // const confirmationMessage = "leaving or refreshing?? unsaved projects will be lost.";
+    // Set a confirmation message (this may not be displayed in some browsers)
+    const confirmationMessage = "leaving or refreshing?? unsaved projects will be lost.";
 
-    // // For most browsers, this is required to show a confirmation dialog
-    // event.returnValue = confirmationMessage; // This is required for older browsers
+    // For most browsers, this is required to show a confirmation dialog
+    event.returnValue = confirmationMessage; // This is required for older browsers
 
-    // // In some modern browsers, returning a string will show a generic confirmation dialog
-    // return confirmationMessage;
+    // In some modern browsers, returning a string will show a generic confirmation dialog
+    return confirmationMessage;
 });
+
+let protocol = window.location.protocol;
+
+if (protocol === 'file:') {
+    document.body.style.backgroundColor = "gray";
+} else if (protocol === 'http:' || protocol === 'https:') {
+    // console.log("The page is opened over HTTP/HTTPS.");
+}
