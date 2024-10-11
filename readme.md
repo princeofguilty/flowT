@@ -28,4 +28,4 @@ Backend: Express.js for handling terminal processes and workflows.
 
 <video controls src="flowT3.mp4" title="demo" style="width: 100%;"></video>
 
-Built by hackers, for hackers.
+``` Built by hacker, for hackers. ```
