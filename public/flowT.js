@@ -116,7 +116,7 @@ function createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell = "
     socket.on('output', (data) => {
         term.write(data);
         fitAddon.fit();
-        terminalDiv.setAttribute('history', terminalDiv.getAttribute('history')+data);
+        terminalDiv.setAttribute('history', terminalDiv.getAttribute('history') + data);
         // windows.new_changes = true;
     });
 
@@ -124,7 +124,7 @@ function createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell = "
     if (!existing_term_Div) {
         socket.emit('new-terminal', shell);
     }
-    else if (history){
+    else if (history) {
         // no terminals
         resizeTerminal();
         term.clear();
@@ -464,7 +464,7 @@ function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing_term_D
             autoexec(term, socket, terminalDiv, 1, 0, terminalDiv.getAttribute('lastCommand'));
         }, 2000);
     }
-    else if (new_orderbox.selectedIndex == 3){ // History
+    else if (new_orderbox.selectedIndex == 3) { // History
         var { term, socket } = createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell, existing_term_Div, true);
         term.write(terminalDiv.getAttribute('history'));
         // term.write('# this is read only terminal!!');
@@ -473,7 +473,7 @@ function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing_term_D
 }
 
 function autoexec(term, sock, terminalDiv, type, turn, original_commands) {
-    if (! original_commands) return;
+    if (!original_commands) return;
     if (original_commands.split(']_[').length <= turn) {
         sock.off('OK', run);
         terminalDiv.setAttribute('lastCommand', original_commands);
@@ -694,6 +694,28 @@ window.onload = function () {
 
         for (const terminalDiv of terminalsDiv) {
             prepareTerminalElement(terminalDiv.getAttribute("termid"), "/usr/bin/zsh", terminalDiv);
+
+            const container = terminalDiv.parentElement;
+            const ball = container.children.pearl
+
+            // When dragging starts on element X
+            ball.addEventListener('pointerdown', (event) => {
+                window.dragSourceT = container.getElementsByClassName('_terminal')[0];
+                window.dragSourceB = ball;
+                // event.dataTransfer.effectAllowed = 'move';
+                console.log("dragSourceT:" + dragSourceT.id);
+                console.log("dragSourceB:" + dragSourceB.id);
+                ball.style.background = "radial-gradient(circle at 35% 35%, white 20%, #f22222 50%, #e0e0e0 80%, #c0c0c0 100%)"
+            });
+
+            ball.addEventListener('mouseenter', (e) => {
+                ball.style.background = "radial-gradient(circle at 35% 35%, white 20%, #2222f2 50%, #e0e0e0 80%, #c0c0c0 100%)"
+            });
+
+            ball.addEventListener('mouseleave', (e) => {
+                ball.style.background = "radial-gradient(circle at 35% 35%, white 20%, #f2f2f2 50%, #e0e0e0 80%, #c0c0c0 100%)"
+            });
+
         }
     }
     canvas.refresh_lines();

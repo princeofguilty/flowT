@@ -19,7 +19,6 @@ function getMousePosition() {
 }
 
 
-
 document.body.addEventListener('paste', (event) => {
     const items = event.clipboardData.items;
 
