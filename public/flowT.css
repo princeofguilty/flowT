@@ -5,6 +5,83 @@
     font-style: normal;
 }
 
+textarea {
+    background-color: rgba(255, 255, 255, 0.107);    
+    width: fit-content;
+    height: fit-content;
+}
+
+.resizable {
+    position: relative;
+    display: inline-block;
+    width: fit-content;
+    height: fit-content;
+    background-color: rgba(211, 211, 211, 0.098);
+    border: 1px solid #ccc;
+    min-width: 170px;
+    min-height: 80px;
+}
+
+/* Create "handle" for resizing */
+.resizable::before, .resizable::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: #000;
+    cursor: nwse-resize;
+}
+
+/* Handle on the bottom-right corner */
+.resizable::after {
+    bottom: -5px;
+    right: -5px;
+}
+
+/* Handle on the top-left corner */
+.resizable::before {
+    top: -5px;
+    left: -5px;
+}
+
+/* Handles for all corners */
+.resizable .top-left, .resizable .top-right, .resizable .bottom-left, .resizable .bottom-right {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: black;
+    z-index: 10;
+}
+
+.resizable .top-left {
+    top: -5px;
+    left: -5px;
+    cursor: nwse-resize;
+}
+
+.resizable .top-right {
+    top: -5px;
+    right: -5px;
+    cursor: nesw-resize;
+}
+
+.resizable .bottom-left {
+    bottom: -5px;
+    left: -5px;
+    cursor: nesw-resize;
+}
+
+.resizable .bottom-right {
+    bottom: -5px;
+    right: -5px;
+    cursor: nwse-resize;
+}
+
+.custom {
+    width: 100%;
+    height: 100%;
+}
+
 select {
     background: transparent;
     color: white;
@@ -27,10 +104,11 @@ img {
 .box {
     position: absolute;
     font-size: 26px;
-    text-wrap: nowrap;
+    text-wrap: wrap;
     z-index: 1;
     color: #fff;
-    margin: 10px 10px;
+    /* margin: 10px 10px; */
+    padding: 4px;
 }
 
 div {
@@ -189,3 +267,4 @@ body {
     user-select: none;
     /* WATCHOUT!! I have a boyfriend! */
 }
+

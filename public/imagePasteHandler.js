@@ -1,5 +1,5 @@
 // imagePasteHandler.js
-import { createBox } from "./box.js";
+import { createCustomBox, createTextBox } from "./box.js";
 
 let mouseX = 0;
 let mouseY = 0;
@@ -35,6 +35,7 @@ document.body.addEventListener('paste', (event) => {
                 const imgElement = document.createElement('img');
                 imgElement.src = base64Image;
                 imgElement.style.maxWidth = '100%'; // Optional: limit image width
+                imgElement.style.height = 'auto';
 
                 // Get the mouse position and adjust for scroll
                 const X = mouseX; // Horizontal position considering scroll
@@ -47,7 +48,7 @@ document.body.addEventListener('paste', (event) => {
                 // box.style.left = `${X}px`;
                 // box.style.top = `${Y}px`;
                 // box.appendChild(imgElement);
-                const box = createBox(X, Y, "", imgElement.outerHTML, "left");
+                const box = createCustomBox(X, Y, imgElement.outerHTML);
 
                 // Append the box with the image to activebody
                 activebody.appendChild(box);

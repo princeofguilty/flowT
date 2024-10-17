@@ -2,7 +2,7 @@ import canvas from './canvas.js'
 import orderbox from './order.js';
 import { Unicode11Addon } from 'xterm-addon-unicode11';
 import { Terminal } from 'xterm';
-import { createBox, makeDraggable } from './box.js';
+import { createTextBox, createCustomBox, makeDraggable, resize_handlers, rightClick_handler, focusOut_handler } from './box.js';
 import { handlePasteImages } from './imagePasteHandler.js'; // Adjust the path as necessary
 import { marked } from 'marked';
 // windows.new_changes = false;
@@ -530,10 +530,26 @@ document.body.addEventListener('dblclick', function (event) {
     const y = event.clientY + scrollY;
 
     // The HTML content to insert in the box
-    const htmlContent = "I'm a box!";
+    const text = "I'm a box!";
 
     // Create the box
-    createBox(x, y, htmlContent);
+    createTextBox(x, y, text);
+});
+
+document.body.addEventListener('mousedown', function (event) {
+    // Check if the middle mouse button (scroll wheel) was clicked
+    if (event.button === 1) {
+        event.preventDefault();
+        // Position the box at the exact location of the double-click
+        const x = event.clientX + scrollX;
+        const y = event.clientY + scrollY;
+
+        // The HTML content to insert in the box
+        const text = "<div>I'm a box!</div>";
+
+        // Create the box
+        createCustomBox(x, y, text);
+    }
 });
 
 
@@ -553,8 +569,7 @@ document.body.style.scrollBehavior = 'smooth'; // Enable smooth scrolling behavi
 
 document.body.addEventListener('mousedown', function (event) {
     // Check if the clicked target or its closest parent contains ._terminal or ._box
-    if (!event.target.closest('._terminal') && !event.target.closest('.box') &&
-        !event.target.closest('.container') && !event.target.closest('.pearl')) {
+    if (event.target == document.body) {
         isDragging = true;
 
         // Record the initial mouse position and scroll position
@@ -719,6 +734,17 @@ window.onload = function () {
         }
     }
     canvas.refresh_lines();
+
+
+    const resizeables = document.getElementsByClassName('resizable');
+    for (let box of resizeables) {
+        resize_handlers(box);
+        let cont = box.parentElement; 
+        makeDraggable(cont.children[0], cont);
+        cont.addEventListener('contextmenu', rightClick_handler);
+        cont.addEventListener('focusout', focusOut_handler);
+    }
+
 }
 
 

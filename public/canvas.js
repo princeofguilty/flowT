@@ -32,7 +32,7 @@ document.head.appendChild(style);
 
 function generate_ball() {
     const ball = document.createElement('div');
-    ball.draggable = true;
+    ball.draggable = false;
     ball.className = "pearl";
     ball.id = "pearl"
     ball.style.userSelect = "none";
