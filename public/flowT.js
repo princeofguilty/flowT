@@ -5,6 +5,7 @@ import { Terminal } from 'xterm';
 import { createTextBox, createCustomBox, makeDraggable, resize_handlers, rightClick_handler, focusOut_handler } from './box.js';
 import { handlePasteImages } from './imagePasteHandler.js'; // Adjust the path as necessary
 import { marked } from 'marked';
+import { terminal_editor as terminal_editor_support } from './terminal_editor.js'
 // windows.new_changes = false;
 
 const terminal_is_done = new CustomEvent('parentisdone');
@@ -282,6 +283,8 @@ function createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell = "
             // windows.new_changes = true;
         }
     });
+
+    terminal_editor_support(terminalDiv);
 
     return { term, socket };
 }
@@ -739,7 +742,7 @@ window.onload = function () {
     const resizeables = document.getElementsByClassName('resizable');
     for (let box of resizeables) {
         resize_handlers(box);
-        let cont = box.parentElement; 
+        let cont = box.parentElement;
         makeDraggable(cont.children[0], cont);
         cont.addEventListener('contextmenu', rightClick_handler);
         cont.addEventListener('focusout', focusOut_handler);

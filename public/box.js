@@ -125,7 +125,8 @@ export function createTextBox(x, y, text) {
     box.style.top = `${y}px`;
 
     box.addEventListener('focusout', function (event) {
-        const new_code = unescapeHTML(box.innerHTML);
+        // const new_code = unescapeHTML(box.innerHTML);
+        box.innerText = box.value;
         box.contentEditable = false;
         box.style.border = "none";
     });
