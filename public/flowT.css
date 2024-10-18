@@ -146,8 +146,8 @@ body {
     background-color: #5c6f73;
     margin: 0;
     padding: 20px;
-    width: 4000px;
-    height: 4000px;
+    width: 10000px;
+    height: 10000px;
     transition: transform 0.2s ease-out;
     transform-origin: center;
     scroll-behavior: smooth;
@@ -222,8 +222,8 @@ body {
 .custom-scale {
     transition-duration: 0.3s;
     overflow: hidden;
-    max-width: 4000px;
-    max-height: 4000px;
+    max-width: 10000px;
+    max-height: 10000px;
 }
 
 /* Style for the line */
@@ -245,8 +245,8 @@ body {
     }
 
     100% {
-        width: 4000px;
-        height: 4000px;
+        width: 10000px;
+        height: 10000px;
         border-width: 50px;
         opacity: 0;
         border-color: rgb(225, 225, 225);

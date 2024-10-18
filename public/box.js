@@ -57,6 +57,7 @@ export function createCustomBox(x, y, outerHTML) {
 
     // document.body.children.activebody.insertAdjacentHTML('beforeend', outerHTML);
     var ball = canvas.generate_ball();
+    ball.draggable = false;
     container.appendChild(ball);
     container.style.flexDirection = "column";
     // container.style.gap = "5px";
@@ -78,8 +79,6 @@ export function createCustomBox(x, y, outerHTML) {
     // container.children[1].style.userSelect = "none";
     activebody.appendChild(container);
     var box = container;
-    x += window.scrollX;
-    y += window.scrollY;
 
     box.style.left = `${x}px`;
     box.style.top = `${y}px`;

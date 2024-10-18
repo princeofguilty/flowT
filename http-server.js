@@ -155,7 +155,7 @@ io.on('connection', (socket) => {
 
         });
 
-        shell.onExit(()=>{
+        shell.onExit(() => {
             socket.emit('exit');
         });
 
@@ -184,6 +184,13 @@ io.on('connection', (socket) => {
 
             // console.log("resizing to: " + new_w + "," + new_h);
             shell.resize(new_w, new_h);
+        });
+
+        // Listen for a command to get environment variables
+        socket.on('getEnvVar', (varName) => {
+            const value = fs.readFileSync(process.env.HOME+'/.gvars/'+varName.slice(1), 'utf8').trim();
+            console.log("variable#> " + varName + ":" + value);
+            socket.emit('envVarResponse', { varName, value });
         });
     });
 });

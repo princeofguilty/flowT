@@ -64,3 +64,4 @@ export function terminal_editor(term, id, terminalDiv, terminalBody, terminalHea
         });
     });
 }
+

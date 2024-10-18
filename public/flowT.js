@@ -10,6 +10,8 @@ import { terminal_editor as terminal_editor_support } from './terminal_editor.js
 
 const terminal_is_done = new CustomEvent('parentisdone');
 
+window.var = null;
+
 window.addEventListener('load', function () {
     window.scrollTo(document.body.clientWidth * 1 / 3, document.body.clientHeight * 1 / 3);
 });
@@ -180,6 +182,11 @@ export function createTerminal(id, terminalDiv, terminalBody, terminalHeader, sh
         term.clear();
         term.reset();
         terminalDiv.setAttribute('history', "");
+    });
+
+    socket.on('envVarResponse', ({ varName, value }) => {
+        // term.write(`Environment Variable ${varName}: ${value}\r\n`);
+        window.var = value;
     });
 
     var lastCommand;
@@ -418,6 +425,7 @@ export function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing
     new_orderbox.addEventListener('change', function () {
         // Get the selected option text
         terminalHeader.setAttribute('order', new_orderbox.selectedIndex);
+        ordering();
     });
 
     // only for testing
@@ -427,94 +435,125 @@ export function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing
     }
     terminalBody.style.fontSize = "22px";
 
-    var term, socket;
+    function ordering() {
 
-    function ct() {
-        var { term, socket } = createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell, existing_term_Div);
-        terminalDiv.removeEventListener('dblclick', ct);
-        setTimeout(() => {
-            autoexec(term, socket, terminalDiv, 0, 0, terminalDiv.getAttribute('lastCommand'));
-        }, 2000);
-    }
+        var term, socket;
 
-    if (new_orderbox.selectedIndex == 0) { // Manual
-        if (existing_term_Div) {
-            terminalDiv.addEventListener('dblclick', ct);
-        }
-        else {
+        function ct() {
             var { term, socket } = createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell, existing_term_Div);
+            terminalDiv.removeEventListener('dblclick', ct);
+            setTimeout(() => {
+                autoexec(term, socket, terminalDiv, 0, 0, terminalDiv.getAttribute('lastCommand'));
+            }, 2000);
+        }
+
+        if (new_orderbox.selectedIndex == 0) { // Manual
             if (existing_term_Div) {
-                setTimeout(() => {
-                    autoexec(term, socket, terminalDiv, 0, 0, terminalDiv.getAttribute('lastCommand'));
-                }, 2000);
+                terminalDiv.addEventListener('dblclick', ct);
+            }
+            else {
+                var { term, socket } = createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell, existing_term_Div);
+                if (existing_term_Div) {
+                    setTimeout(() => {
+                        autoexec(term, socket, terminalDiv, 0, 0, terminalDiv.getAttribute('lastCommand'));
+                    }, 2000);
+                }
             }
         }
-    }
-    else if (new_orderbox.selectedIndex == 2) { // on previous success
-        // Add the event listener
-        document.getElementById(terminalDiv.getAttribute('parent')).addEventListener('parentisdone', (event) => {
+        else if (new_orderbox.selectedIndex == 2) { // on previous success
+            // Add the event listener
+            document.getElementById(terminalDiv.getAttribute('parent')).addEventListener('parentisdone', (event) => {
+                var { term, socket } = createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell, existing_term_Div);
+                setTimeout(() => {
+                    autoexec(term, socket, terminalDiv, 2, 0, terminalDiv.getAttribute('lastCommand'));
+                }, 2000);
+            });
+        }
+        else if (new_orderbox.selectedIndex == 1) { // startup
             var { term, socket } = createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell, existing_term_Div);
             setTimeout(() => {
-                autoexec(term, socket, terminalDiv, 2, 0, terminalDiv.getAttribute('lastCommand'));
+                autoexec(term, socket, terminalDiv, 1, 0, terminalDiv.getAttribute('lastCommand'));
             }, 2000);
-        });
+        }
+        else if (new_orderbox.selectedIndex == 3) { // History
+            var { term, socket } = createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell, existing_term_Div, true);
+            term.write(terminalDiv.getAttribute('history'));
+            // term.write('# this is read only terminal!!');
+        }
+        // document.body.appendChild(document.body.createElement('div'));
     }
-    else if (new_orderbox.selectedIndex == 1) { // startup
-        var { term, socket } = createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell, existing_term_Div);
-        setTimeout(() => {
-            autoexec(term, socket, terminalDiv, 1, 0, terminalDiv.getAttribute('lastCommand'));
-        }, 2000);
-    }
-    else if (new_orderbox.selectedIndex == 3) { // History
-        var { term, socket } = createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell, existing_term_Div, true);
-        term.write(terminalDiv.getAttribute('history'));
-        // term.write('# this is read only terminal!!');
-    }
-    // document.body.appendChild(document.body.createElement('div'));
+    ordering();
+    
 }
 
 function autoexec(term, sock, terminalDiv, type, turn, original_commands) {
     if (!original_commands) return;
     if (original_commands.split(']_[').length <= turn) {
-        sock.off('OK', run);
+        try {
+            sock.off('OK', run);
+        } catch {
+
+        }
         terminalDiv.setAttribute('lastCommand', original_commands);
         terminalDiv.dispatchEvent(terminal_is_done);  // Dispatch the event for the terminalDiv
         return;
     }
 
-    let command = original_commands.split(']_[')[turn];
-    let time = 2; //seconds
+    var command = original_commands.split(']_[')[turn];
+    var time = 2; //seconds
 
-    const regex = /^(\d+)>(.+)$/;
-    const match = command.match(regex);
-    if (match) {
-        time = match[1];  // Capture group 1 (the number)
-        command = match[2];  // Capture group 2 (the command)
+    var regex = /^(\d+)>(.+)$/;
+    const timed_command_regex_match = command.match(regex);
+    if (timed_command_regex_match) {
+        time = timed_command_regex_match[1];  // Capture group 1 (the number)
+        command = timed_command_regex_match[2];  // Capture group 2 (the command)
     }
 
-    if (type >= 1) {
-        // term.write('r ' + command + '\n');
-        if (match)
-            sock.emit('input', command + '\n');
-        else
-            sock.emit('input', 'r ' + command + '\n');
+    if (timed_command_regex_match) {
+        regex = /\$([a-zA-Z_][a-zA-Z0-9_]*)/g;
+        var match;
+        var varName;
+        match = command.match(regex)
+        if (match) {
+            varName = match[0]; // Extract variable name (without the $)
+            sock.emit('getEnvVar', varName);
+            setTimeout(() => {
+                command = command.replace(varName, window.var);
+                window.var = null;
+                execution(command);
+            }, 500);
+        }
+        else { execution(command); }
     }
     else {
-        // term.write('r ' + command);
-        if (match)
-            sock.emit('input', command);
-        else
-            sock.emit('input', 'r ' + command);
-    }
-    function run() {
-        sock.off('OK', run);
-        setTimeout(() => { autoexec(term, sock, terminalDiv, type, turn + 1, original_commands); }, time * 1000);
+        execution(command);
     }
 
-    if (match) { //dont wait for ok
-        run();
-    } else {
-        sock.on('OK', run);
+    function execution(command) {
+        if (type >= 1) {
+            // term.write('r ' + command + '\n');
+            if (timed_command_regex_match)
+                sock.emit('input', command + '\n');
+            else
+                sock.emit('input', 'r ' + command + '\n');
+        }
+        else {
+            // term.write('r ' + command);
+            if (timed_command_regex_match)
+                sock.emit('input', command);
+            else
+                sock.emit('input', 'r ' + command);
+        }
+        function run() {
+            sock.off('OK', run);
+            setTimeout(() => { autoexec(term, sock, terminalDiv, type, turn + 1, original_commands); }, time * 1000);
+        }
+
+        if (timed_command_regex_match) { //dont wait for ok
+            run();
+        } else {
+            sock.on('OK', run);
+        }
     }
 }
 
@@ -561,9 +600,9 @@ document.body.addEventListener('mousedown', function (event) {
     // Check if the middle mouse button (scroll wheel) was clicked
     if (event.button === 1) {
         event.preventDefault();
-        // Position the box at the exact location of the double-click
-        const x = event.clientX + scrollX;
-        const y = event.clientY + scrollY;
+        // Position the box at the exact location of the middle-click
+        const x = event.clientX + window.scrollX;
+        const y = event.clientY + window.scrollY;
 
         // The HTML content to insert in the box
         const text = "<div>I'm a box!</div>";
