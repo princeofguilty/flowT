@@ -140,7 +140,7 @@ export function createTerminal(id, terminalDiv, terminalBody, terminalHeader, sh
         fitAddon.fit();
         const new_w = term.cols;
         const new_h = term.rows;
-        console.log("current size: ", id, new_w, new_h);
+        // console.log("current size: ", id, new_w, new_h);
         terminalBody.style.width = "100%";
         terminalBody.style.height = 'calc(100% - 30px)';
         socket.emit('resize', { id, new_w, new_h });
@@ -483,19 +483,39 @@ function autoexec(term, sock, terminalDiv, type, turn, original_commands) {
     }
 
     let command = original_commands.split(']_[')[turn];
+    let time = 2; //seconds
+
+    const regex = /^(\d+)>(.+)$/;
+    const match = command.match(regex);
+    if (match) {
+        time = match[1];  // Capture group 1 (the number)
+        command = match[2];  // Capture group 2 (the command)
+    }
+
     if (type >= 1) {
         // term.write('r ' + command + '\n');
-        sock.emit('input', 'r ' + command + '\n');
+        if (match)
+            sock.emit('input', command + '\n');
+        else
+            sock.emit('input', 'r ' + command + '\n');
     }
     else {
         // term.write('r ' + command);
-        sock.emit('input', 'r ' + command);
+        if (match)
+            sock.emit('input', command);
+        else
+            sock.emit('input', 'r ' + command);
     }
     function run() {
         sock.off('OK', run);
-        setTimeout(() => { autoexec(term, sock, terminalDiv, type, turn + 1, original_commands); }, 2000);
+        setTimeout(() => { autoexec(term, sock, terminalDiv, type, turn + 1, original_commands); }, time * 1000);
     }
-    sock.on('OK', run);
+
+    if (match) { //dont wait for ok
+        run();
+    } else {
+        sock.on('OK', run);
+    }
 }
 
 

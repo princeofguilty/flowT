@@ -6,7 +6,7 @@ export function terminal_editor(term, id, terminalDiv, terminalBody, terminalHea
         event.preventDefault(); // Prevent the default context menu from appearing
 
         if (!event.currentTarget.hasAttribute('lastcommand'))
-            return;
+            event.currentTarget.setAttribute('lastcommand', '');
 
         let commands = event.currentTarget.getAttribute('lastcommand').split(']_[');
         let ta = document.createElement('textarea');
