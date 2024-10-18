@@ -9,6 +9,8 @@ textarea {
     background-color: rgba(255, 255, 255, 0.107);    
     width: fit-content;
     height: fit-content;
+    font-size: large;
+    color: #fff;
 }
 
 .resizable {

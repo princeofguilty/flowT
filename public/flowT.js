@@ -14,7 +14,6 @@ window.addEventListener('load', function () {
     window.scrollTo(document.body.clientWidth * 1 / 3, document.body.clientHeight * 1 / 3);
 });
 
-
 var activebody = document.getElementById("activebody");
 
 // create these elements for each terminal to store data, and put them in
@@ -61,9 +60,8 @@ spawnButton.addEventListener('click', () => {
 });
 
 // variable for stacking terminals!
-let clicks_counter = 0;
 
-function createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell = "/usr/bin/zsh", existing_term_Div, history = false) {
+export function createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell = "/usr/bin/zsh", existing_term_Div, history = false) {
     terminalBody.innerHTML = "";
     var term = new Terminal({
         cursorBlink: true,
@@ -259,8 +257,8 @@ function createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell = "
     });
     // stacking!
     terminalDiv.addEventListener('click', () => {
-        clicks_counter += 1;
-        terminalDiv.style.zIndex = clicks_counter;
+        window.clicks_counter += 1;
+        terminalDiv.style.zIndex = window.clicks_counter;
         // windows.new_changes = true;
     });
 
@@ -284,14 +282,14 @@ function createTerminal(id, terminalDiv, terminalBody, terminalHeader, shell = "
         }
     });
 
-    terminal_editor_support(terminalDiv);
+    terminal_editor_support(term, id, terminalDiv, terminalBody, terminalHeader, shell = "/usr/bin/zsh", existing_term_Div, history = false);
 
     return { term, socket };
 }
 
 // make a new terminal ?? note, use shell full path please ^u^
 // if there's existing_term_div, ignores id
-function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing_term_Div = null) {
+export function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing_term_Div = null) {
     if (!existing_term_Div) {
         var terminalDiv = document.createElement('div');
         terminalDiv.className = '_terminal';
@@ -375,8 +373,8 @@ function prepareTerminalElement(id = -1, shell = "/usr/bin/zsh", existing_term_D
 
 
     // stack this terminal over the previous ones
-    clicks_counter++;
-    terminalDiv.style.zIndex = clicks_counter;
+    window.clicks_counter++;
+    terminalDiv.style.zIndex = window.clicks_counter;
 
     // Make the terminal draggable
     makeDraggable(terminalHeader, container);
